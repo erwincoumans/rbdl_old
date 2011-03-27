@@ -12,7 +12,7 @@
 using namespace RigidBodyDynamics;
 
 void compute_body_center_and_dimensions (Model* model, unsigned int body_id, Vector3d &body_center, Vector3d &body_dimensions) {
-	int j;
+	unsigned int j;
 
 	// draw the body as a green box that extends from the origin to the
 	// next joint
@@ -79,10 +79,6 @@ void draw_model (Model* model) {
 	glEnable(GL_LIGHTING);
 
 	glEnable (GL_DEPTH_TEST);
-	glPushMatrix();
-	glTranslatef (2., 0., 0.);
-	glprimitives_sphere();
-	glPopMatrix();
 
 	unsigned int i;
 	for (i = 1; i < model->q.size(); i++) {
