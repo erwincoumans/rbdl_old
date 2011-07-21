@@ -134,7 +134,7 @@ int main (int argc, char* argv[]) {
 	
 	body_b_id = model->AddBody(body_a_id, Xtrans(Vector3d(1., 0., 0.)), joint_b, body_b);
 	
-	body_c = Body (0., Vector3d (0.5, 0., 0.), Vector3d (1., 1., 1.));
+	body_c = Body (1., Vector3d (0.5, 0., 0.), Vector3d (1., 1., 1.));
 		joint_c = Joint (
 		JointTypeRevolute,
 		Vector3d (0., 0., 1.)
@@ -154,21 +154,25 @@ int main (int argc, char* argv[]) {
 	q_sym[0] = t;
 
 	MatrixNd mass_matrix_sym = MatrixNd::Zero (model->dof_count, model->dof_count);
-	mass_matrix_sym(0,0) = q_sym[0];
-	mass_matrix_sym(1,1) = q_sym[1];
-	mass_matrix_sym(2,2) = q_sym[2];
-
 	ForwardKinematics (*model, q_sym, qdot_sym, qddot_sym);
 
 	CompositeRigidBodyAlgorithm (*model, q_sym, mass_matrix_sym);
-	cout << "### JOINT SPACE INERTIA ###" << endl;
+	cout << "### JOINT SPACE INERTIA M(q) ###" << endl;
 	cout << mass_matrix_sym << endl;
+
+	cout << endl;
+
+	VectorNd coriolis_sym = VectorNd::Zero (model->dof_count);
+	InverseDynamics (*model, q_sym, qdot_sym, qddot_sym, tau_sym);
+
+	cout << "### CORIOLIS FORCES N(q, qdot) ###" << endl;
+	cout << tau_sym << endl;
 
 	cout << endl;
 
  	ForwardDynamics (*model, q_sym, qdot_sym, tau_sym, qddot_sym);
 
-	cout << "### FORWARD DYNAMICS ###" << endl;
+	cout << "### FORWARD DYNAMICS qddot = FD (q, qdot, tau) ###" << endl;
 	cout << qddot_sym << endl;
 
 	delete model;
