@@ -29,6 +29,8 @@ OPTION (BUILD_GUI "Build the (rudimentary) graphical user interface" OFF)
 OPTION (BUILD_TESTS "Build the test executables" OFF)
 OPTION (RBDL_ENABLE_LOGGING "Enable logging (warning: major impact on performance!)" OFF)
 OPTION (RBDL_USE_SIMPLE_MATH "Use slow math instead of the fast Eigen3 library (faster compilation)" OFF)
+OPTION (RBDL_USE_GINAC "Use GiNaC to use symbolic computation (horribly
+slow!)" OFF)
 
 SET ( RBDL_SOURCES 
 	src/mathutils.cc

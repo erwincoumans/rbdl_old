@@ -365,7 +365,7 @@ void ForwardDynamicsContactsLagrangian (
 		std::vector<ContactInfo> &ContactData,
 		VectorNd &QDDot
 		) {
-#ifdef GINAC_MATH
+#ifdef RBDL_USE_GINAC
 	assert (0 && !"Function not supported with ginac math");
 #else
 	LOG << "-------- " << __func__ << " --------" << std::endl;
@@ -514,7 +514,7 @@ void ComputeContactImpulsesLagrangian (
 		std::vector<ContactInfo> &ContactData,
 		VectorNd &QDotPlus
 		) {
-#ifdef GINAC_MATH
+#ifdef RBDL_USE_GINAC
 	assert (0 && !"Function not supported in ginac math");
 #else
 	LOG << "-------- " << __func__ << " --------" << std::endl;

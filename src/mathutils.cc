@@ -116,7 +116,7 @@ Matrix3d VectorCrossMatrix (const Vector3d &vector) {
 }
 
 bool LinSolveGaussElimPivot (MatrixNd A, VectorNd b, VectorNd &x) {
-#ifdef GINAC_MATH
+#ifdef RBDL_USE_GINAC
 	assert (0 && !"function not supported with GiNaC");
 #else
 	x = VectorNd::Zero(x.size());
@@ -225,7 +225,7 @@ void SpatialMatrixSetSubmatrix(SpatialMatrix &dest, unsigned int row, unsigned i
 }
 
 bool SpatialMatrixCompareEpsilon (const SpatialMatrix &matrix_a, const SpatialMatrix &matrix_b, double epsilon) {
-#ifdef GINAC_MATH
+#ifdef RBDL_USE_GINAC
 	assert (0 && !"Function not supported with GiNaC!");
 #else
 	assert (epsilon >= 0.);
@@ -247,7 +247,7 @@ bool SpatialMatrixCompareEpsilon (const SpatialMatrix &matrix_a, const SpatialMa
 }
 
 bool SpatialVectorCompareEpsilon (const SpatialVector &vector_a, const SpatialVector &vector_b, double epsilon) {
-#ifdef GINAC_MATH
+#ifdef RBDL_USE_GINAC
 	assert (0 && !"Function not supported with GiNaC!");
 #else
 	assert (epsilon >= 0.);

@@ -3,9 +3,7 @@
 
 #include "rbdlconfig.h"
 
-// #define GINAC_MATH
-
-#ifdef GINAC_MATH
+#ifdef RBDL_USE_GINAC
 	#define RBDL_USE_SIMPLE_MATH
 	
 	#include "ginac.h"
