@@ -183,6 +183,7 @@ class Block {
 	unsigned int parent_row_index;
 	unsigned int parent_col_index;
 	bool transposed;
+	typedef val_type value_type;
 
 	val_type *parent;
 };
@@ -213,6 +214,7 @@ class Matrix {
 			for (i = 0; i < nrows * ncols; i++)
 				mData[i] = matrix.mData[i];
 		}
+
 		Matrix& operator=(const Matrix &matrix) {
 			if (this != &matrix) {
 				unsigned int i;
@@ -463,20 +465,20 @@ class Matrix {
 		}
 
 		// access operators
-		const double& operator[](const unsigned int &index) const {
+		const val_type& operator[](const unsigned int &index) const {
 			assert (index	>= 0 && index < nrows * ncols);
 			return mData[index];
 		};
-		double& operator[](const unsigned int &index) {
+		val_type& operator[](const unsigned int &index) {
 			assert (index	>= 0 && index < nrows * ncols);
 			return mData[index];
 		}
 
-		const double& operator()(const unsigned int &row, const unsigned int &col) const {
+		const val_type& operator()(const unsigned int &row, const unsigned int &col) const {
 			assert (row	>= 0 && row < nrows && col	>= 0 && col < ncols);
 			return mData[row*ncols + col];
 		};
-		double& operator()(const unsigned int &row, const unsigned int &col) {
+		val_type& operator()(const unsigned int &row, const unsigned int &col) {
 			assert (row	>= 0 && row < nrows && col	>= 0 && col < ncols);
 			return mData[row*ncols + col];
 		};
@@ -562,7 +564,7 @@ class Matrix {
 		Block<val_type, blockrows, blockcols> block (unsigned int i, unsigned int j) const {
 			COMPILE_ASSERT (nrows > blockrows);
 			COMPILE_ASSERT (ncols > blockcols);
-			return Block<val_type, blockrows, blockcols> (const_cast<double*> (this->mData), i, j, nrows, ncols);
+			return Block<val_type, blockrows, blockcols> (const_cast<val_type*> (this->mData), i, j, nrows, ncols);
 		}
 
 		// Operators with scalars
@@ -659,12 +661,14 @@ class Matrix {
 			return mData[0];
 		}
 
+		typedef val_type value_type;
+
 	private:
 		val_type mData[nrows * ncols];
 };
 
-template <unsigned int blockrows, unsigned int blockcols>
-inline std::ostream& operator<<(std::ostream& output, const Block<double, blockrows, blockcols> &block) {
+template <typename val_type ,unsigned int blockrows, unsigned int blockcols>
+inline std::ostream& operator<<(std::ostream& output, const Block<val_type, blockrows, blockcols> &block) {
 	output << std::endl;
 
 	unsigned int i,j;
@@ -678,6 +682,16 @@ inline std::ostream& operator<<(std::ostream& output, const Block<double, blockr
 
 	return output;
 }
+
+/*
+template <typename val_type, unsigned int nrows, unsigned int ncols>
+inline val_type operator=(const Matrix<val_type, nrows, ncols> &matrix) {
+	COMPILE_ASSERT (nrows == 1);
+	COMPILE_ASSERT (ncols == 1);
+
+	return matrix[0];
+}
+*/
 
 template <typename val_type, unsigned int nrows, unsigned int ncols>
 inline Matrix<val_type, nrows, ncols> operator*(val_type scalar, const Matrix<val_type, nrows, ncols> &matrix) {
@@ -1000,20 +1014,20 @@ class Matrix {
 		}
 
 		// access operators
-		const double& operator[](const unsigned int &index) const {
+		const val_type& operator[](const unsigned int &index) const {
 			assert (index	>= 0 && index < nrows * ncols);
 			return mData[index];
 		};
-		double& operator[](const unsigned int &index) {
+		val_type& operator[](const unsigned int &index) {
 			assert (index	>= 0 && index < nrows * ncols);
 			return mData[index];
 		}
 
-		const double& operator()(const unsigned int &row, const unsigned int &col) const {
+		const val_type& operator()(const unsigned int &row, const unsigned int &col) const {
 			assert (row	>= 0 && row < nrows && col >= 0 && col < ncols);
 			return mData[row*ncols + col];
 		};
-		double& operator()(const unsigned int &row, const unsigned int &col) {
+		val_type& operator()(const unsigned int &row, const unsigned int &col) {
 			assert (row	>= 0 && row < nrows && col >= 0 && col < ncols);
 			return mData[row*ncols + col];
 		};
@@ -1118,7 +1132,7 @@ class Matrix {
 		Block<val_type, blockrows, blockcols> block (unsigned int i, unsigned int j) const {
 			assert (nrows > blockrows);
 			assert (ncols > blockcols);
-			return Block<val_type, blockrows, blockcols> (const_cast<double*> (this->mData), i, j, nrows, ncols);
+			return Block<val_type, blockrows, blockcols> (const_cast<val_type*> (this->mData), i, j, nrows, ncols);
 		}
 
 		// Operators with scalars
@@ -1214,6 +1228,8 @@ class Matrix {
 			return mData[0];
 		}
 
+		typedef val_type value_type;
+
 	private:
 		unsigned int nrows;
 		unsigned int ncols;
@@ -1221,8 +1237,8 @@ class Matrix {
 		val_type* mData;
 };
 
-template <unsigned int blockrows, unsigned int blockcols>
-inline std::ostream& operator<<(std::ostream& output, const Block<double, blockrows, blockcols> &block) {
+template <typename val_type ,unsigned int blockrows, unsigned int blockcols>
+inline std::ostream& operator<<(std::ostream& output, const Block<val_type, blockrows, blockcols> &block) {
 	output << std::endl;
 
 	unsigned int i,j;

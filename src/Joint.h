@@ -126,8 +126,8 @@ void jcalc (
 		SpatialAlgebra::SpatialVector &S,
 		SpatialAlgebra::SpatialVector &v_J,
 		SpatialAlgebra::SpatialVector &c_J,
-		const double &q,
-		const double &qdot
+		const value_type &q,
+		const value_type &qdot
 		);
 
 }

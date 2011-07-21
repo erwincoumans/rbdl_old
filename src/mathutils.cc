@@ -116,6 +116,9 @@ Matrix3d VectorCrossMatrix (const Vector3d &vector) {
 }
 
 bool LinSolveGaussElimPivot (MatrixNd A, VectorNd b, VectorNd &x) {
+#ifdef GINAC_MATH
+	assert (0 && !"function not supported with GiNaC");
+#else
 	x = VectorNd::Zero(x.size());
 
 	// We can only solve quadratic systems
@@ -129,7 +132,7 @@ bool LinSolveGaussElimPivot (MatrixNd A, VectorNd b, VectorNd &x) {
 
 	// temporary result vector which contains the pivoted result
 	VectorNd px(x);
-	
+
 	unsigned int i,j,k;
 
 	for (i = 0; i < n; i++)
@@ -137,12 +140,12 @@ bool LinSolveGaussElimPivot (MatrixNd A, VectorNd b, VectorNd &x) {
 
 	for (j = 0; j < n; j++) {
 		pi = j;
-		double pv = fabs (A(j,pivot[j]));
+		value_type pv = fabs (A(j,pivot[j]));
 
 		// LOG << "j = " << j << " pv = " << pv << std::endl;
 		// find the pivot
 		for (k = j; k < n; k++) {
-			double pt = fabs (A(j,pivot[k]));
+			value_type pt = fabs (A(j,pivot[k]));
 			if (pt > pv) {
 				pv = pt;
 				pi = k;
@@ -201,6 +204,7 @@ bool LinSolveGaussElimPivot (MatrixNd A, VectorNd b, VectorNd &x) {
 
 	delete[] pivot;
 
+#endif
 	return true;
 }
 
@@ -221,6 +225,9 @@ void SpatialMatrixSetSubmatrix(SpatialMatrix &dest, unsigned int row, unsigned i
 }
 
 bool SpatialMatrixCompareEpsilon (const SpatialMatrix &matrix_a, const SpatialMatrix &matrix_b, double epsilon) {
+#ifdef GINAC_MATH
+	assert (0 && !"Function not supported with GiNaC!");
+#else
 	assert (epsilon >= 0.);
 	unsigned int i, j;
 
@@ -235,11 +242,14 @@ bool SpatialMatrixCompareEpsilon (const SpatialMatrix &matrix_a, const SpatialMa
 			}
 		}
 	}
-
+#endif
 	return true;
 }
 
 bool SpatialVectorCompareEpsilon (const SpatialVector &vector_a, const SpatialVector &vector_b, double epsilon) {
+#ifdef GINAC_MATH
+	assert (0 && !"Function not supported with GiNaC!");
+#else
 	assert (epsilon >= 0.);
 	unsigned int i;
 
@@ -252,7 +262,7 @@ bool SpatialVectorCompareEpsilon (const SpatialVector &vector_a, const SpatialVe
 			return false;
 		}
 	}
-
+#endif
 	return true;
 }
 
@@ -267,8 +277,8 @@ SpatialMatrix Xtrans (const Vector3d &r) {
 			);
 }
 
-SpatialMatrix Xrotx (const double &xrot) {
-	double s, c;
+SpatialMatrix Xrotx (const value_type &xrot) {
+	value_type s, c;
 	s = sin (xrot);
 	c = cos (xrot);
 
@@ -282,8 +292,8 @@ SpatialMatrix Xrotx (const double &xrot) {
 			);
 }
 
-SpatialMatrix Xroty (const double &yrot) {
-	double s, c;
+SpatialMatrix Xroty (const value_type &yrot) {
+	value_type s, c;
 	s = sin (yrot);
 	c = cos (yrot);
 
@@ -297,8 +307,8 @@ SpatialMatrix Xroty (const double &yrot) {
 			);
 }
 
-SpatialMatrix Xrotz (const double &zrot) {
-	double s, c;
+SpatialMatrix Xrotz (const value_type &zrot) {
+	value_type s, c;
 	s = sin (zrot);
 	c = cos (zrot);
 

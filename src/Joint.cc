@@ -18,8 +18,8 @@ void jcalc (
 		SpatialVector &S,
 		SpatialVector &v_J,
 		SpatialVector &c_J,
-		const double &q,
-		const double &qdot
+		const value_type &q,
+		const value_type &qdot
 		) {
 	// exception if we calculate it for the root body
 	assert (joint_id > 0);

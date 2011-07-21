@@ -61,7 +61,7 @@ SpatialAlgebra::SpatialMatrix Xtrans (const Vector3d &displacement);
  *
  * \param zrot Rotation angle in radians.
  */
-SpatialAlgebra::SpatialMatrix Xrotz (const double &zrot);
+SpatialAlgebra::SpatialMatrix Xrotz (const value_type &zrot);
 
 /** \brief Creates a rotational transformation around the Y-axis
  *
@@ -70,7 +70,7 @@ SpatialAlgebra::SpatialMatrix Xrotz (const double &zrot);
  *
  * \param yrot Rotation angle in radians.
  */
-SpatialAlgebra::SpatialMatrix Xroty (const double &yrot);
+SpatialAlgebra::SpatialMatrix Xroty (const value_type &yrot);
 
 /** \brief Creates a rotational transformation around the X-axis
  *
@@ -79,7 +79,7 @@ SpatialAlgebra::SpatialMatrix Xroty (const double &yrot);
  *
  * \param xrot Rotation angle in radians.
  */
-SpatialAlgebra::SpatialMatrix Xrotx (const double &xrot);
+SpatialAlgebra::SpatialMatrix Xrotx (const value_type &xrot);
 
 /** \brief Creates a spatial transformation for given parameters 
  *

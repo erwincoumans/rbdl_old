@@ -61,7 +61,7 @@ struct ContactInfo {
 	Vector3d point;
 	/// \brief Normal of the contact point in base coordinates
 	Vector3d normal;
-	/// \brief Acceleration value of the constraint along the normal
+	/// \brief Acceleration value_type of the constraint along the normal
 	double acceleration;
 	/// \brief Force acting along the normal
 	double force;
@@ -112,8 +112,8 @@ struct ContactInfo {
  * \param ContactData	a list of all contact points
  * \param QDDot accelerations of the internals joints (output)
  *
- * \note During execution of this function the values ContactData[i].force
- * 	get modified and will contain the value of the force acting along
+ * \note During execution of this function the value_types ContactData[i].force
+ * 	get modified and will contain the value_type of the force acting along
  * 	the normal.
  */
 void ForwardDynamicsContactsLagrangian (
@@ -173,8 +173,8 @@ void ForwardDynamicsContactsLagrangian (
  * \param ContactData	a list of all contact points
  * \param QDotPlus velocities of the internals joints after the impact (output)
  *
- * \note During execution of this function the values ContactInfo::force
- * 	get modified and will contain the value of the impulse acting along
+ * \note During execution of this function the value_types ContactInfo::force
+ * 	get modified and will contain the value_type of the impulse acting along
  * 	the normal.
  */
 void ComputeContactImpulsesLagrangian (
@@ -200,8 +200,8 @@ namespace Experimental {
  * \param ContactData	a list of all contact points and their desired accelerations
  * \param Fext  constraint forces that enforce desired acceleration on the constraints
  *
- * \note During execution of this function the values ContactData[i].force
- * 	get modified and will contain the value of the force acting along
+ * \note During execution of this function the value_types ContactData[i].force
+ * 	get modified and will contain the value_type of the force acting along
  * 	the normal.
  */
 void ComputeContactForces (
@@ -226,8 +226,8 @@ void ComputeContactForces (
  * \param ContactData	a list of all contact points
  * \param QDDot accelerations of the internals joints (output)
  *
- * \note During execution of this function the values ContactData[i].force
- * 	get modified and will contain the value of the force acting along
+ * \note During execution of this function the value_types ContactData[i].force
+ * 	get modified and will contain the value_type of the force acting along
  * 	the normal.
  */
 void ForwardDynamicsContacts (

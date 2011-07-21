@@ -43,7 +43,7 @@ void ForwardDynamics (
 		assert (0 && "Experimental floating base not supported");
 	}
 
-	SpatialVector spatial_gravity (0., 0., 0., model.gravity[0], model.gravity[1], model.gravity[2]);
+	SpatialVector spatial_gravity (0., 0., 0., -model.gravity[0], -model.gravity[1], -model.gravity[2]);
 
 	unsigned int i;
 
@@ -181,7 +181,9 @@ void ForwardDynamics (
 		SpatialMatrix X_lambda = model.X_lambda[i];
 
 		if (lambda == 0) {
-			model.a[i] = X_lambda * spatial_gravity * (-1.) + model.c[i];
+			// ginacfix
+			//		model.a[i] = X_lambda * spatial_gravity * (-1.) + model.c[i];
+			model.a[i] = X_lambda * spatial_gravity + model.c[i];
 		} else {
 			model.a[i] = X_lambda * model.a[lambda] + model.c[i];
 		}
@@ -234,7 +236,9 @@ void ForwardDynamicsLagrangian (
 	CompositeRigidBodyAlgorithm (model, Q, H);
 
 	LOG << "A = " << std::endl << H << std::endl;
-	LOG << "b = " << std::endl << C * -1. + Tau << std::endl;
+// ginacfix
+// LOG << "b = " << std::endl << C * -1. + Tau << std::endl;
+	LOG << "b = " << std::endl << C + Tau << std::endl;
 
 #ifndef RBDL_USE_SIMPLE_MATH
 	QDDot = H.colPivHouseholderQr().solve (C * -1. + Tau);
@@ -258,7 +262,7 @@ void InverseDynamics (
 	if (model.experimental_floating_base)
 		assert (0 && !"InverseDynamics not supported for experimental floating base models!");
 
-	SpatialVector spatial_gravity (0., 0., 0., model.gravity[0], model.gravity[1], model.gravity[2]);
+	SpatialVector spatial_gravity (0., 0., 0., -model.gravity[0], -model.gravity[1], -model.gravity[2]);
 
 	unsigned int i;
 
@@ -276,7 +280,7 @@ void InverseDynamics (
 
 	// Reset the velocity of the root body
 	model.v[0].setZero();
-	model.a[0] = spatial_gravity * -1.;
+	model.a[0] = spatial_gravity;
 
 	for (i = 1; i < model.mBodies.size(); i++) {
 		SpatialMatrix X_J;
@@ -293,7 +297,7 @@ void InverseDynamics (
 		if (lambda == 0) {
 			model.X_base[i] = model.X_lambda[i];
 			model.v[i] = v_J;
-			model.a[i] = model.X_base[i] * spatial_gravity * -1. + model.S[i] * model.qddot[i];
+			model.a[i] = model.X_base[i] * spatial_gravity + model.S[i] * model.qddot[i];
 		}	else {
 			model.X_base[i] = model.X_lambda[i] * model.X_base.at(lambda);
 			model.v[i] = model.X_lambda[i] * model.v[lambda] + v_J;
@@ -361,6 +365,9 @@ void ForwardDynamicsContactsLagrangian (
 		std::vector<ContactInfo> &ContactData,
 		VectorNd &QDDot
 		) {
+#ifdef GINAC_MATH
+	assert (0 && !"Function not supported with ginac math");
+#else
 	LOG << "-------- " << __func__ << " --------" << std::endl;
 
 	// Note: InverseDynamics must be called *before*
@@ -497,6 +504,7 @@ void ForwardDynamicsContactsLagrangian (
 	for (i = 0; i < ContactData.size(); i++) {
 		ContactData[i].force = x[model.dof_count + i];
 	}
+#endif
 }
 
 void ComputeContactImpulsesLagrangian (
@@ -506,6 +514,9 @@ void ComputeContactImpulsesLagrangian (
 		std::vector<ContactInfo> &ContactData,
 		VectorNd &QDotPlus
 		) {
+#ifdef GINAC_MATH
+	assert (0 && !"Function not supported in ginac math");
+#else
 	LOG << "-------- " << __func__ << " --------" << std::endl;
 
 	// Compute H
@@ -602,6 +613,7 @@ void ComputeContactImpulsesLagrangian (
 		ContactData[i].force = x[model.dof_count + i];
 	}
 
+#endif
 }
 
 
@@ -856,190 +868,6 @@ void ForwardDynamicsFloatingBaseExpl (
 #endif
 
 	a_B = model.a[0];
-}
-
-void ComputeContactForces (
-		Model &model,
-		const VectorNd &Q,
-		const VectorNd &QDot,
-		const VectorNd &Tau,
-		std::vector<ContactInfo> &ContactData,
-		std::vector<SpatialAlgebra::SpatialVector> &Fext
-		) {
-	LOG << "-------- ComputeContactForces ------" << std::endl;
-
-	// so far we only allow one constraint
-	unsigned int contact_count = ContactData.size();
-
-	// Steps to perform the contact algorithm suggested by Kokkevis and
-	// Metaxas
-	//
-	// 1. Set external forces at P to zero and compute link accelerations and
-	// compute a^0_P (the magnitude of the acceleration of P) and evaluate
-	// C^0
-	//
-	// 2. Apply a unit force at P and compute a^1_P (the magnitude of the
-	// resulting acceleration) and compute the net effect a^e_P of f^1.
-	//
-	// 3. Compute the required constraint force.
-	
-	// Step one, compute the standard forward dynamics without external
-	// forces at P.
-	
-	// Step 1:
-	
-	// save current external forces:
-
-	MatrixNd Ae;
-	Ae.resize(contact_count, contact_count);
-	VectorNd C0 (contact_count);
-	VectorNd a0 (contact_count);
-
-	std::vector<SpatialVector> current_f_ext (model.f_ext);
-	std::vector<SpatialVector> zero_f_ext (model.f_ext.size(), SpatialVector (0., 0., 0., 0., 0., 0.));
-	Vector3d gravity_backup = model.gravity;
-
-	model.f_ext = zero_f_ext;
-
-	LOG << "-------- ZERO_EXT ------" << std::endl;
-	VectorNd QDDot_zero_ext (QDot);
-	{
-		SUPPRESS_LOGGING;
-		ForwardDynamics (model, Q, QDot, Tau, QDDot_zero_ext);
-	}
-
-	unsigned int ci;
-	for (ci = 0; ci < contact_count; ci++) {
-		ContactInfo contact_info = ContactData[ci];
-		LOG << "ContactData[" << ci << "].acceleration = " << contact_info.acceleration << std::endl;
-
-		// compute point accelerations
-		Vector3d point_accel;
-		{
-			SUPPRESS_LOGGING;
-			point_accel = CalcPointAcceleration (model, Q, QDot, QDDot_zero_ext, contact_info.body_id, contact_info.point);
-		}
-
-		// evaluate a0 and C0
-//		double a0i = cml::dot(contact_info.normal,point_accel);
-		double a0i = contact_info.normal.dot(point_accel);
-
-		a0[ci] = a0i;
-		C0[ci] = - (a0i - contact_info.acceleration);
-	}
-
-	// Step 2:
-	std::vector<SpatialVector> test_forces (contact_count);
-
-	unsigned int cj;
-	// Compute the test force
-	for (cj = 0; cj < contact_count; cj++) {
-		ContactInfo contact_info = ContactData[cj];
-		SpatialVector test_force (0., 0., 0., contact_info.normal[0], contact_info.normal[1], contact_info.normal[2]);
-
-		// transform the test force from the point coordinates to base
-		// coordinates
-		Vector3d contact_point_position = model.CalcBodyToBaseCoordinates(contact_info.body_id, contact_info.point);
-
-		test_forces[cj] = spatial_adjoint(Xtrans (contact_point_position)) * test_force;
-		LOG << "body_id         = " << contact_info.body_id << std::endl;
-
-		// apply the test force
-		model.f_ext[contact_info.body_id] = test_forces[cj];
-		VectorNd QDDot_test_ext (QDot);
-
-		LOG << "-------- TEST_EXT -------" << std::endl;
-		LOG << "test_force_body = " << spatial_adjoint(Xtrans (model.GetBodyOrigin(contact_info.body_id) - contact_point_position)) * test_forces[cj] << std::endl;
-		LOG << "test_force_base = " << test_forces[cj] << std::endl;
-		{
-			SUPPRESS_LOGGING;
-			ForwardDynamics (model, Q, QDot, Tau, QDDot_test_ext);
-		}
-		LOG << "QDDot_test_ext  = " << QDDot_test_ext << std::endl;
-
-		for (ci = 0; ci < contact_count; ci++) {
-			ContactInfo test_contact_info = ContactData[ci];
-			// compute point accelerations after the test force
-			Vector3d point_test_accel;
-			{
-				SUPPRESS_LOGGING;
-				point_test_accel = CalcPointAcceleration (model, Q, QDot, QDDot_test_ext, test_contact_info.body_id, test_contact_info.point);
-			}
-
-			// acceleration due to the test force
-//			double a1j_i = cml::dot(test_contact_info.normal, point_test_accel);
-			double a1j_i = test_contact_info.normal.dot(point_test_accel);
-			LOG << "test_accel a1j_i = " << a1j_i << std::endl;
-			LOG << "a0[ci] = " << a0[ci] << std::endl;
-			Ae(ci,cj) = a1j_i - a0[ci];
-			LOG << "updating (" << ci << ", " << cj << ") = " << Ae(ci,cj) << std::endl;
-		}
-
-		// clear the test force
-		model.f_ext[contact_info.body_id].setZero();
-	}
-	
-	// solve the system!!!
-	VectorNd u (contact_count);
-
-	LOG << "Ae = " << std::endl << Ae << std::endl;
-	LOG << "C0 = " << C0 << std::endl;
-	LinSolveGaussElimPivot (Ae, C0, u);
-
-	// !!!
-	u[0] = 8.81;
-//	test_forces[0].setZero(); 
-
-	LOG << "u = " << u << std::endl;
-
-	// compute and apply the constraint forces to the system
-	model.f_ext = current_f_ext;
-
-	Fext = zero_f_ext;
-
-	for (ci = 0; ci < contact_count; ci++) {
-		ContactData[ci].force = u[ci];
-
-		test_forces[ci] = test_forces[ci] * u[ci];
-		// it is important to *add* the constraint force as multiple forces
-		// might act on the same body
-		Fext[ContactData[ci].body_id] += test_forces[ci];
-		LOG << "test_forces[" << ci << "] = " << test_forces[ci] << std::endl;
-		LOG << "f_ext[" << ContactData[ci].body_id << "] = " << Fext[ContactData[ci].body_id] << std::endl;
-	}
-}
-
-void ForwardDynamicsContacts (
-		Model &model,
-		const VectorNd &Q,
-		const VectorNd &QDot,
-		const VectorNd &Tau,
-		std::vector<ContactInfo> &ContactData,
-		VectorNd &QDDot
-		) {
-	LOG << "-------- ForwardDynamicsContacts ------" << std::endl;
-
-	std::vector<SpatialVector> contact_f_ext (model.f_ext.size(), SpatialVector (0., 0., 0., 0., 0., 0.));
-
-	ComputeContactForces (model, Q, QDot, Tau, ContactData, contact_f_ext);
-
-	assert (contact_f_ext.size() == model.f_ext.size());
-
-	unsigned int i;
-	for (i = 0; i < model.f_ext.size(); i++) {
-		model.f_ext[i] += contact_f_ext[i];
-		LOG << "f_ext[" << i << "] = " << model.f_ext[i] << std::endl;
-	}
-
-	LOG << "-------- APPLY_EXT ------" << std::endl;
-	{
-		SUPPRESS_LOGGING;
-		ForwardDynamics (model, Q, QDot, Tau, QDDot);
-	}
-	LOG << "apply q     = " << Q << std::endl;
-	LOG << "apply qdot  = " << QDot << std::endl;
-	LOG << "apply tau   = " << Tau << std::endl;
-	LOG << "apply qddot = " << QDDot << std::endl;
 }
 
 } /* namespace Experimental */

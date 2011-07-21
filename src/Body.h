@@ -53,7 +53,7 @@ struct Body {
 	 * \param com  the position of the center of mass in the bodies coordinates
 	 * \param gyration_radii the radii of gyration at the center of mass of the body
 	 */
-	Body(const double &mass,
+	Body(const value_type &mass,
 			const Vector3d &com,
 			const Vector3d &gyration_radii) :
 		mMass (mass),
@@ -91,7 +91,7 @@ struct Body {
 	 * \param com  the position of the center of mass in the bodies coordinates
 	 * \param inertia_C the inertia at the center of mass
 	 */
-	Body(const double &mass,
+	Body(const value_type &mass,
 			const Vector3d &com,
 			const Matrix3d &inertia_C) :
 		mMass (mass),
@@ -134,9 +134,9 @@ struct Body {
 	 * \param length the length of the segment (needed to compute the inertia at the CoM
 	 * \param gyration_radii the radii of gyration at the center of mass of the body in percentage of the segment length
 	 */
-	Body(const double &mass,
+	Body(const value_type &mass,
 			const Vector3d &com,
-			const double &length,
+			const value_type &length,
 			const Vector3d &gyration_radii) :
 		mMass (mass),
 		mCenterOfMass(com) {
@@ -175,7 +175,7 @@ struct Body {
 	~Body() {};
 
 	/// \brief The mass of the body
-	double mMass;
+	value_type mMass;
 	/// \brief The position of the center of mass in body coordinates
 	Vector3d mCenterOfMass;
 	/// \brief The spatial inertia that contains both mass and inertia information
