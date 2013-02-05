@@ -7,13 +7,13 @@
 
 #include <iostream>
 
-#include <rbdl.h>
+#include <rbdl/rbdl.h>
 
 #ifndef BUILD_ADDON_LUAMODEL
 	#error "Error: RBDL addon BUILD_LUAMODELS not activated."
 #endif
 
-#include <addons/luamodel/luamodel.h>
+#include <rbdl/addons/luamodel/luamodel.h>
 
 using namespace RigidBodyDynamics;
 using namespace RigidBodyDynamics::Math;
@@ -26,7 +26,7 @@ int main (int argc, char* argv[]) {
 	model = new Model();
 	model->Init();
 
-	if (!Addons::LuaModelReadFromFile ("./samplemodel.lua", model, false)) {
+	if (!Addons::LuaModelReadFromFile ("./samplemodel.lua", model, true)) {
 		std::cerr << "Error loading model ./samplemodel.lua" << std::endl;
 		abort();
 	}
@@ -38,6 +38,7 @@ int main (int argc, char* argv[]) {
 
  	ForwardDynamics (*model, Q, QDot, Tau, QDDot);
 
+	std::cout << Q.transpose() << std::endl;
 	std::cout << QDDot.transpose() << std::endl;
 
 	delete model;
