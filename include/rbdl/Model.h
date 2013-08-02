@@ -8,7 +8,7 @@
 #ifndef _MODEL_H
 #define _MODEL_H
 
-#include <rbdl/rbdl_math.h>
+#include "rbdl/rbdl_math.h"
 #include <map>
 #include <list>
 #include <assert.h>
@@ -34,8 +34,7 @@ EIGEN_DEFINE_STL_VECTOR_SPECIALIZATION(RigidBodyDynamics::FixedBody);
  */
 namespace RigidBodyDynamics {
 
-/** \defgroup model_group Modelling
- * @{
+/** \page modeling_page Modelling
  *
  * There are two ways of creating models for RBDL:
  *
@@ -52,6 +51,8 @@ namespace RigidBodyDynamics {
  * For this see the documentation of \ref luamodel_introduction.
  *
  * \section modeling_cpp Modeling using C++
+ *
+ * The API for the RBDL Models can be found at \ref RigidBodyDynamics::Model.
  *
  * Using the C++ interface is more advanced but gives some overview about the
  * internals of RBDL.
@@ -390,6 +391,69 @@ struct RBDL_DLLAPI Model {
 		}
 		return false;
 	}
+
+	/** Determines id the actual parent body.
+	 *
+	 * When adding bodies using joints with multiple degrees of
+	 * freedom, additional virtual bodies are added for each degree of
+	 * freedom. This function returns the id of the actual
+	 * non-virtual parent body.
+	 */
+	unsigned int GetParentBodyId (unsigned int id) {
+		if (id >= fixed_body_discriminator) {
+			return mFixedBodies[id - fixed_body_discriminator].mMovableParent;
+		}
+
+		unsigned int parent_id = lambda[id]; 
+	
+		while (mBodies[parent_id].mIsVirtual) {
+			parent_id = lambda[parent_id];
+		}
+
+		return parent_id;
+	}
+
+	/** Returns the joint frame transformtion, i.e. the second argument to Model::AddBody().
+	 */
+	Math::SpatialTransform GetJointFrame (unsigned int id) {
+		if (id >= fixed_body_discriminator) {
+			return mFixedBodies[id - fixed_body_discriminator].mParentTransform;
+		}
+
+		unsigned int child_id = id;
+		unsigned int parent_id = lambda[id];
+		if (mBodies[parent_id].mIsVirtual) {
+			while (mBodies[parent_id].mIsVirtual) {
+				child_id = parent_id;
+				parent_id = lambda[child_id];
+			}
+			return X_T[child_id];
+		} else
+			return X_T[id];	
+	}
+
+	/** Sets the joint frame transformtion, i.e. the second argument to Model::AddBody().
+	 */
+	void SetJointFrame (unsigned int id, const Math::SpatialTransform &transform) {
+		if (id >= fixed_body_discriminator) {
+			std::cerr << "Error: setting of parent transform not supported for fixed bodies!" << std::endl;
+			abort();
+		}
+
+		unsigned int child_id = id;
+		unsigned int parent_id = lambda[id];
+		if (mBodies[parent_id].mIsVirtual) {
+			while (mBodies[parent_id].mIsVirtual) {
+				child_id = parent_id;
+				parent_id = lambda[child_id];
+			}
+			X_T[child_id] = transform;
+		} else if (id > 0) {
+			X_T[id] = transform;
+		}
+	}
+
+
 };
 
 /** @} */
