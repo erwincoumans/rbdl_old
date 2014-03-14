@@ -12,6 +12,7 @@
 #include <assert.h>
 #include <iostream>
 #include "rbdl/Logging.h"
+#include "rbdl/Model.h"
 
 namespace RigidBodyDynamics {
 
@@ -128,6 +129,7 @@ enum RBDL_DLLAPI JointType {
 	JointTypeRevolute,
 	JointTypePrismatic,
 	JointTypeSpherical,
+	JointTypeSphericalZYX,
 	JointTypeFixed,
 
 	JointType1DoF,
@@ -156,6 +158,14 @@ struct RBDL_DLLAPI Joint {
 	  mDoFCount (0),
 		q_index (0) {
 			if (type == JointTypeSpherical) {
+				mDoFCount = 3;
+
+				mJointAxes = new Math::SpatialVector[mDoFCount];
+
+				mJointAxes[0] = Math::SpatialVector (0., 0., 1., 0., 0., 0.);
+				mJointAxes[1] = Math::SpatialVector (0., 1., 0., 0., 0., 0.);
+				mJointAxes[2] = Math::SpatialVector (1., 0., 0., 0., 0., 0.);
+			} else if (type == JointTypeSphericalZYX) {
 				mDoFCount = 3;
 
 				mJointAxes = new Math::SpatialVector[mDoFCount];
@@ -495,6 +505,14 @@ void jcalc (
 		const Math::VectorNd &q,
 		const Math::VectorNd &qdot
 		);
+
+RBDL_DLLAPI
+Math::SpatialTransform jcalc_XJ (
+		Model &model,
+		unsigned int joint_id,
+		const Math::VectorNd &q);
+
 }
+
 
 #endif /* _JOINT_H */

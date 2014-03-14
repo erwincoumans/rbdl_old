@@ -455,7 +455,6 @@ struct RBDL_DLLAPI Model {
 };
 
 /** @} */
-
 }
 
 #endif /* _MODEL_H */
