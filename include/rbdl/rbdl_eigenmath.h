@@ -8,7 +8,7 @@
 #ifndef _RBDL_EIGENMATH_H
 #define _RBDL_EIGENMATH_H
 
-class Vector3_t : public Eigen::Vector3d
+class RBDL_DLLAPI Vector3_t : public Eigen::Vector3d
 {
 	public:
 		typedef Eigen::Vector3d Base;
@@ -33,21 +33,19 @@ class Vector3_t : public Eigen::Vector3d
 				)
 		{
 			Base::_check_template_params();
-			EIGEN_STATIC_ASSERT_VECTOR_SPECIFIC_SIZE(Matrix, 3)
 
-				(*this) << v0, v1, v2;
+			(*this) << v0, v1, v2;
 		}
 
 		void set(const double& v0, const double& v1, const double& v2)
 		{
 			Base::_check_template_params();
-			EIGEN_STATIC_ASSERT_VECTOR_SPECIFIC_SIZE(Matrix, 3)
 
-				(*this) << v0, v1, v2;
+			(*this) << v0, v1, v2;
 		}
 };
 
-class Matrix3_t : public Eigen::Matrix3d
+class RBDL_DLLAPI Matrix3_t : public Eigen::Matrix3d
 {
 	public:
 		typedef Eigen::Matrix3d Base;
@@ -74,9 +72,8 @@ class Matrix3_t : public Eigen::Matrix3d
 				)
 		{
 			Base::_check_template_params();
-			EIGEN_STATIC_ASSERT_MATRIX_SPECIFIC_SIZE(Matrix, 3, 3)
 
-				(*this)
+			(*this)
 				<< m00, m01, m02,
 				m10, m11, m12,
 				m20, m21, m22
@@ -84,7 +81,44 @@ class Matrix3_t : public Eigen::Matrix3d
 		}
 };
 
-class SpatialVector_t : public Eigen::Matrix<double, 6, 1>
+class RBDL_DLLAPI Vector4_t : public Eigen::Vector4d
+{
+	public:
+		typedef Eigen::Vector4d Base;
+
+		template<typename OtherDerived>
+			Vector4_t(const Eigen::MatrixBase<OtherDerived>& other)
+			: Eigen::Vector4d(other)
+			{}
+
+		template<typename OtherDerived>
+			Vector4_t& operator=(const Eigen::MatrixBase<OtherDerived>& other)
+			{
+				this->Base::operator=(other);
+				return *this;
+			}
+
+		EIGEN_STRONG_INLINE Vector4_t()
+		{}
+
+		EIGEN_STRONG_INLINE Vector4_t(
+				const double& v0, const double& v1, const double& v2, const double& v3
+				)
+		{
+			Base::_check_template_params();
+
+			(*this) << v0, v1, v2, v3;
+		}
+
+		void set(const double& v0, const double& v1, const double& v2, const double& v3)
+		{
+			Base::_check_template_params();
+
+			(*this) << v0, v1, v2, v3;
+		}
+};
+
+class RBDL_DLLAPI SpatialVector_t : public Eigen::Matrix<double, 6, 1>
 {
 	public:
 		typedef Eigen::Matrix<double, 6, 1> Base;
@@ -110,9 +144,8 @@ class SpatialVector_t : public Eigen::Matrix<double, 6, 1>
 				)
 		{
 			Base::_check_template_params();
-			EIGEN_STATIC_ASSERT_VECTOR_SPECIFIC_SIZE(Matrix, 6)
 
-				(*this) << v0, v1, v2, v3, v4, v5;
+			(*this) << v0, v1, v2, v3, v4, v5;
 		}
 
 		void set(
@@ -121,13 +154,12 @@ class SpatialVector_t : public Eigen::Matrix<double, 6, 1>
 				)
 		{
 			Base::_check_template_params();
-			EIGEN_STATIC_ASSERT_VECTOR_SPECIFIC_SIZE(Matrix, 6)
 
-				(*this) << v0, v1, v2, v3, v4, v5;
+			(*this) << v0, v1, v2, v3, v4, v5;
 		}
 };
 
-class SpatialMatrix_t : public Eigen::Matrix<double, 6, 6>
+class RBDL_DLLAPI SpatialMatrix_t : public Eigen::Matrix<double, 6, 6>
 {
 	public:
 		typedef Eigen::Matrix<double, 6, 6> Base;
@@ -157,9 +189,8 @@ class SpatialMatrix_t : public Eigen::Matrix<double, 6, 6>
 				)
 		{
 			Base::_check_template_params();
-			EIGEN_STATIC_ASSERT_MATRIX_SPECIFIC_SIZE(Matrix, 6, 6)
 
-				(*this)
+			(*this)
 				<< m00, m01, m02, m03, m04, m05
 				, m10, m11, m12, m13, m14, m15
 				, m20, m21, m22, m23, m24, m25
@@ -179,9 +210,8 @@ class SpatialMatrix_t : public Eigen::Matrix<double, 6, 6>
 				)
 		{
 			Base::_check_template_params();
-			EIGEN_STATIC_ASSERT_MATRIX_SPECIFIC_SIZE(Matrix, 6, 6)
 
-				(*this)
+			(*this)
 				<< m00, m01, m02, m03, m04, m05
 				, m10, m11, m12, m13, m14, m15
 				, m20, m21, m22, m23, m24, m25

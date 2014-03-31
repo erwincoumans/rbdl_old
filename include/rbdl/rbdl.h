@@ -11,24 +11,30 @@
 #include "rbdl/rbdl_math.h"
 #include "rbdl/rbdl_mathutils.h"
 
+#include "rbdl/Logging.h"
+
 #include "rbdl/Body.h"
 #include "rbdl/Model.h"
-
 #include "rbdl/Dynamics.h"
 #include "rbdl/Joint.h"
 #include "rbdl/Kinematics.h"
-#include "rbdl/Logging.h"
-
 #include "rbdl/Contacts.h"
 
-/** \defgroup api_version_checking API Version Checking
+#include "rbdl/rbdl_utils.h"
+
+/** \page api_version_checking_page API Changes
  * @{
  *
- * This documentation was created for API version 1.0.0.
+ * This documentation was created for API version 2.2.0.
+ *
+ * Here is a list of changes introduced by the different versions and what
+ * adjustements have to be made to migrate.
+ *
+ * \include api_changes.txt
  */
 
 /** Returns the API version at compile time of the library. */
-int rbdl_get_api_version();
+RBDL_DLLAPI int rbdl_get_api_version();
 
 /** Ensures whether the RBDL library we are linking against is compatible
  * with the the version we have from rbdl.h.
@@ -54,9 +60,9 @@ int rbdl_get_api_version();
  * linked minor version is not 10 (= 0x0A). The patch version 12 (= 0x12)
  * does not have an influence on compatibility.
  */
-void rbdl_check_api_version(int version);
+RBDL_DLLAPI void rbdl_check_api_version(int version);
 
 /** Prints version information to standard output */
-void rbdl_print_version();
+RBDL_DLLAPI void rbdl_print_version();
 
 #endif /* _RBDL_H */

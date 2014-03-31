@@ -1,35 +1,36 @@
 /*
- * luatables
- * Copyright (c) 2011-2012 Martin Felis <martin.felis@iwr.uni-heidelberg.de>
- * 
- * (zlib license)
- * 
- * This software is provided 'as-is', without any express or implied
- * warranty. In no event will the authors be held liable for any damages
- * arising from the use of this software.
- * 
- * Permission is granted to anyone to use this software for any purpose,
- * including commercial applications, and to alter it and redistribute it
- * freely, subject to the following restrictions:
- * 
- *    1. The origin of this software must not be misrepresented; you must not
- *    claim that you wrote the original software. If you use this software
- *    in a product, an acknowledgment in the product documentation would be
- *    appreciated but is not required.
- * 
- *    2. Altered source versions must be plainly marked as such, and must not be
- *    misrepresented as being the original software.
- * 
- *    3. This notice may not be removed or altered from any source
- *    distribution.
+ * LuaTables++
+ * Copyright (c) 2013-2014 Martin Felis <martin@fyxs.org>.
+ * All rights reserved.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
 #include "luatables.h"
 
+#include <assert.h>
 #include <iostream>
 #include <cstdlib>
 #include <vector>
 #include <sstream>
+#include <cmath>
 
 extern "C"
 {
@@ -38,398 +39,644 @@ extern "C"
    #include <lualib.h>
 }
 
+#include <stdio.h>  /* defines FILENAME_MAX */
+#ifdef WINDOWS
+    #include <direct.h>
+    #define get_current_dir _getcwd
+#else
+    #include <unistd.h>
+    #define get_current_dir getcwd
+ #endif
+
+#if defined(WIN32) || defined (_WIN32)
+#define DIRECTORY_SEPARATOR "\\"
+#elif defined(linux) || defined (__linux) || defined(__linux__) || defined(__APPLE__)
+#define DIRECTORY_SEPARATOR "/"
+#else
+#error Platform not supported!
+#endif
+
 using namespace std;
 
+std::string get_file_directory (const char* filename) {
+	string name (filename);
+	string result = name.substr(0, name.find_last_of (DIRECTORY_SEPARATOR) + 1);
+
+	if (result == "")
+		result = "./";
+#if defined (WIN32) || defined (_WIN32)
+#warning get_file_directory() not yet tested under Windows!
+	else if (result.substr(1,2) != ":\\")
+		result = string(".\\") + result;
+#else
+	else if (result.substr(0,string(DIRECTORY_SEPARATOR).size()) != DIRECTORY_SEPARATOR  && result[0] != '.')
+		result = string("./") + result;
+#endif
+
+	return result;
+}
+
+// char encoded serialize function that is available in plaintext in
+// utils/serialize.lua. Converted using lua auto.lua serialize.lua
+const char serialize_std[] = {
+	0x66, 0x75, 0x6e, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x20, 0x69, 0x73, 0x6c, 0x69, 0x73, 0x74, 0x20, 0x28, 0x74, 
+	0x29, 0x0a,
+	0x09, 0x6c, 0x6f, 0x63, 0x61, 0x6c, 0x20, 0x69, 0x74, 0x65, 0x6d, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x20, 0x3d, 
+	0x20, 0x30, 0x0a,
+	0x09, 0x6c, 0x6f, 0x63, 0x61, 0x6c, 0x20, 0x6c, 0x61, 0x73, 0x74, 0x5f, 0x74, 0x79, 0x70, 0x65, 0x20, 0x3d, 
+	0x20, 0x6e, 0x69, 0x6c, 0x0a,
+	0x09, 0x66, 0x6f, 0x72, 0x20, 0x6b, 0x2c, 0x76, 0x20, 0x69, 0x6e, 0x20, 0x70, 0x61, 0x69, 0x72, 0x73, 0x28, 
+	0x74, 0x29, 0x20, 0x64, 0x6f, 0x0a,
+	0x09, 0x09, 0x69, 0x74, 0x65, 0x6d, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x20, 0x3d, 0x20, 0x69, 0x74, 0x65, 0x6d, 
+	0x63, 0x6f, 0x75, 0x6e, 0x74, 0x20, 0x2b, 0x20, 0x31, 0x0a,
+	0x09, 0x09, 0x69, 0x66, 0x20, 0x6c, 0x61, 0x73, 0x74, 0x5f, 0x74, 0x79, 0x70, 0x65, 0x20, 0x3d, 0x3d, 0x20, 
+	0x6e, 0x69, 0x6c, 0x20, 0x74, 0x68, 0x65, 0x6e, 0x0a,
+	0x09, 0x09, 0x09, 0x6c, 0x61, 0x73, 0x74, 0x5f, 0x74, 0x79, 0x70, 0x65, 0x20, 0x3d, 0x20, 0x74, 0x79, 0x70, 
+	0x65, 0x28, 0x76, 0x29, 0x0a,
+	0x09, 0x09, 0x65, 0x6e, 0x64, 0x0a,
+	0x09, 0x09, 0x69, 0x66, 0x20, 0x74, 0x79, 0x70, 0x65, 0x28, 0x76, 0x29, 0x20, 0x7e, 0x3d, 0x20, 0x6c, 0x61, 
+	0x73, 0x74, 0x5f, 0x74, 0x79, 0x70, 0x65, 0x20, 0x6f, 0x72, 0x20, 0x28, 0x74, 0x79, 0x70, 0x65, 0x28, 0x76, 
+	0x29, 0x20, 0x7e, 0x3d, 0x20, 0x22, 0x73, 0x74, 0x72, 0x69, 0x6e, 0x67, 0x22, 0x20, 0x61, 0x6e, 0x64, 0x20, 
+	0x74, 0x79, 0x70, 0x65, 0x28, 0x76, 0x29, 0x20, 0x7e, 0x3d, 0x20, 0x22, 0x6e, 0x75, 0x6d, 0x62, 0x65, 0x72, 
+	0x22, 0x20, 0x61, 0x6e, 0x64, 0x20, 0x74, 0x79, 0x70, 0x65, 0x28, 0x76, 0x29, 0x20, 0x7e, 0x3d, 0x20, 0x22, 
+	0x62, 0x6f, 0x6f, 0x6c, 0x65, 0x61, 0x6e, 0x22, 0x29, 0x20, 0x74, 0x68, 0x65, 0x6e, 0x0a,
+	0x09, 0x09, 0x09, 0x72, 0x65, 0x74, 0x75, 0x72, 0x6e, 0x20, 0x66, 0x61, 0x6c, 0x73, 0x65, 0x0a,
+	0x09, 0x09, 0x65, 0x6e, 0x64, 0x0a,
+	0x09, 0x0a,
+	0x09, 0x09, 0x6c, 0x61, 0x73, 0x74, 0x5f, 0x74, 0x79, 0x70, 0x65, 0x20, 0x3d, 0x20, 0x74, 0x79, 0x70, 0x65, 
+	0x28, 0x76, 0x29, 0x0a,
+	0x09, 0x65, 0x6e, 0x64, 0x0a,
+	0x09, 0x69, 0x66, 0x20, 0x69, 0x74, 0x65, 0x6d, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x20, 0x7e, 0x3d, 0x20, 0x23, 
+	0x74, 0x20, 0x74, 0x68, 0x65, 0x6e, 0x0a,
+	0x09, 0x09, 0x72, 0x65, 0x74, 0x75, 0x72, 0x6e, 0x20, 0x66, 0x61, 0x6c, 0x73, 0x65, 0x0a,
+	0x09, 0x65, 0x6e, 0x64, 0x0a,
+	0x09, 0x72, 0x65, 0x74, 0x75, 0x72, 0x6e, 0x20, 0x74, 0x72, 0x75, 0x65, 0x0a,
+	0x65, 0x6e, 0x64, 0x0a,
+	0x66, 0x75, 0x6e, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x20, 0x73, 0x65, 0x72, 0x69, 0x61, 0x6c, 0x69, 0x7a, 0x65, 
+	0x20, 0x28, 0x6f, 0x2c, 0x20, 0x74, 0x61, 0x62, 0x73, 0x29, 0x0a,
+	0x20, 0x20, 0x6c, 0x6f, 0x63, 0x61, 0x6c, 0x20, 0x72, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x20, 0x3d, 0x20, 0x22, 
+	0x22, 0x0a,
+	0x20, 0x20, 0x0a,
+	0x20, 0x20, 0x69, 0x66, 0x20, 0x74, 0x61, 0x62, 0x73, 0x20, 0x3d, 0x3d, 0x20, 0x6e, 0x69, 0x6c, 0x20, 0x74, 
+	0x68, 0x65, 0x6e, 0x0a,
+	0x20, 0x20, 0x20, 0x20, 0x74, 0x61, 0x62, 0x73, 0x20, 0x3d, 0x20, 0x22, 0x22, 0x0a,
+	0x20, 0x20, 0x65, 0x6e, 0x64, 0x0a,
+	0x20, 0x20, 0x69, 0x66, 0x20, 0x74, 0x79, 0x70, 0x65, 0x28, 0x6f, 0x29, 0x20, 0x3d, 0x3d, 0x20, 0x22, 0x6e, 
+	0x75, 0x6d, 0x62, 0x65, 0x72, 0x22, 0x20, 0x74, 0x68, 0x65, 0x6e, 0x0a,
+	0x20, 0x20, 0x20, 0x20, 0x72, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x20, 0x3d, 0x20, 0x72, 0x65, 0x73, 0x75, 0x6c, 
+	0x74, 0x20, 0x2e, 0x2e, 0x20, 0x74, 0x6f, 0x73, 0x74, 0x72, 0x69, 0x6e, 0x67, 0x28, 0x6f, 0x29, 0x0a,
+	0x20, 0x20, 0x65, 0x6c, 0x73, 0x65, 0x69, 0x66, 0x20, 0x74, 0x79, 0x70, 0x65, 0x28, 0x6f, 0x29, 0x20, 0x3d, 
+	0x3d, 0x20, 0x22, 0x62, 0x6f, 0x6f, 0x6c, 0x65, 0x61, 0x6e, 0x22, 0x20, 0x74, 0x68, 0x65, 0x6e, 0x0a,
+	0x20, 0x20, 0x20, 0x20, 0x72, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x20, 0x3d, 0x20, 0x72, 0x65, 0x73, 0x75, 0x6c, 
+	0x74, 0x20, 0x2e, 0x2e, 0x20, 0x74, 0x6f, 0x73, 0x74, 0x72, 0x69, 0x6e, 0x67, 0x28, 0x6f, 0x29, 0x0a,
+	0x20, 0x20, 0x65, 0x6c, 0x73, 0x65, 0x69, 0x66, 0x20, 0x74, 0x79, 0x70, 0x65, 0x28, 0x6f, 0x29, 0x20, 0x3d, 
+	0x3d, 0x20, 0x22, 0x73, 0x74, 0x72, 0x69, 0x6e, 0x67, 0x22, 0x20, 0x74, 0x68, 0x65, 0x6e, 0x0a,
+	0x20, 0x20, 0x20, 0x20, 0x72, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x20, 0x3d, 0x20, 0x72, 0x65, 0x73, 0x75, 0x6c, 
+	0x74, 0x20, 0x2e, 0x2e, 0x20, 0x73, 0x74, 0x72, 0x69, 0x6e, 0x67, 0x2e, 0x66, 0x6f, 0x72, 0x6d, 0x61, 0x74, 
+	0x28, 0x22, 0x25, 0x71, 0x22, 0x2c, 0x20, 0x6f, 0x29, 0x0a,
+	0x09, 0x65, 0x6c, 0x73, 0x65, 0x69, 0x66, 0x20, 0x74, 0x79, 0x70, 0x65, 0x28, 0x6f, 0x29, 0x20, 0x3d, 0x3d, 
+	0x20, 0x22, 0x74, 0x61, 0x62, 0x6c, 0x65, 0x22, 0x20, 0x61, 0x6e, 0x64, 0x20, 0x69, 0x73, 0x6c, 0x69, 0x73, 
+	0x74, 0x28, 0x6f, 0x29, 0x20, 0x74, 0x68, 0x65, 0x6e, 0x0a,
+	0x09, 0x09, 0x72, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x20, 0x3d, 0x20, 0x72, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x20, 
+	0x2e, 0x2e, 0x20, 0x22, 0x7b, 0x22, 0x0a,
+	0x09, 0x09, 0x66, 0x6f, 0x72, 0x20, 0x69, 0x2c, 0x76, 0x20, 0x69, 0x6e, 0x20, 0x69, 0x70, 0x61, 0x69, 0x72, 
+	0x73, 0x28, 0x6f, 0x29, 0x20, 0x64, 0x6f, 0x0a,
+	0x09, 0x09, 0x09, 0x72, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x20, 0x3d, 0x20, 0x72, 0x65, 0x73, 0x75, 0x6c, 0x74, 
+	0x20, 0x2e, 0x2e, 0x20, 0x22, 0x20, 0x22, 0x20, 0x2e, 0x2e, 0x20, 0x74, 0x6f, 0x73, 0x74, 0x72, 0x69, 0x6e, 
+	0x67, 0x28, 0x76, 0x29, 0x20, 0x2e, 0x2e, 0x20, 0x22, 0x2c, 0x22, 0x0a,
+	0x09, 0x09, 0x65, 0x6e, 0x64, 0x0a,
+	0x09, 0x09, 0x72, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x20, 0x3d, 0x20, 0x72, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x20, 
+	0x2e, 0x2e, 0x20, 0x22, 0x7d, 0x22, 0x0a,
+	0x20, 0x20, 0x65, 0x6c, 0x73, 0x65, 0x69, 0x66, 0x20, 0x74, 0x79, 0x70, 0x65, 0x28, 0x6f, 0x29, 0x20, 0x3d, 
+	0x3d, 0x20, 0x22, 0x74, 0x61, 0x62, 0x6c, 0x65, 0x22, 0x20, 0x74, 0x68, 0x65, 0x6e, 0x0a,
+	0x20, 0x20, 0x20, 0x20, 0x69, 0x66, 0x20, 0x6f, 0x2e, 0x64, 0x6f, 0x6e, 0x74, 0x5f, 0x73, 0x65, 0x72, 0x69, 
+	0x61, 0x6c, 0x69, 0x7a, 0x65, 0x5f, 0x6d, 0x65, 0x20, 0x74, 0x68, 0x65, 0x6e, 0x0a,
+	0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x72, 0x65, 0x74, 0x75, 0x72, 0x6e, 0x20, 0x22, 0x7b, 0x7d, 0x22, 0x0a,
+	0x20, 0x20, 0x20, 0x20, 0x65, 0x6e, 0x64, 0x0a,
+	0x20, 0x20, 0x20, 0x20, 0x72, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x20, 0x3d, 0x20, 0x72, 0x65, 0x73, 0x75, 0x6c, 
+	0x74, 0x20, 0x2e, 0x2e, 0x20, 0x22, 0x7b, 0x5c, 0x6e, 0x22, 0x0a,
+	0x20, 0x20, 0x20, 0x20, 0x66, 0x6f, 0x72, 0x20, 0x6b, 0x2c, 0x76, 0x20, 0x69, 0x6e, 0x20, 0x70, 0x61, 0x69, 
+	0x72, 0x73, 0x28, 0x6f, 0x29, 0x20, 0x64, 0x6f, 0x0a,
+	0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x69, 0x66, 0x20, 0x74, 0x79, 0x70, 0x65, 0x28, 0x76, 0x29, 0x20, 0x7e, 
+	0x3d, 0x20, 0x22, 0x66, 0x75, 0x6e, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x22, 0x20, 0x74, 0x68, 0x65, 0x6e, 0x0a,
+	0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x2d, 0x2d, 0x20, 0x6d, 0x61, 0x6b, 0x65, 0x20, 0x73, 0x75, 
+	0x72, 0x65, 0x20, 0x74, 0x68, 0x61, 0x74, 0x20, 0x6e, 0x75, 0x6d, 0x62, 0x65, 0x72, 0x65, 0x64, 0x20, 0x6b, 
+	0x65, 0x79, 0x73, 0x20, 0x61, 0x72, 0x65, 0x20, 0x70, 0x72, 0x6f, 0x70, 0x65, 0x72, 0x6c, 0x79, 0x20, 0x61, 
+	0x72, 0x65, 0x20, 0x69, 0x6e, 0x64, 0x65, 0x78, 0x69, 0x66, 0x69, 0x65, 0x64, 0x0a,
+	0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x69, 0x66, 0x20, 0x74, 0x79, 0x70, 0x65, 0x28, 0x6b, 0x29, 
+	0x20, 0x3d, 0x3d, 0x20, 0x22, 0x6e, 0x75, 0x6d, 0x62, 0x65, 0x72, 0x22, 0x20, 0x74, 0x68, 0x65, 0x6e, 0x0a,
+	0x09, 0x09, 0x09, 0x09, 0x20, 0x20, 0x69, 0x66, 0x20, 0x74, 0x79, 0x70, 0x65, 0x28, 0x76, 0x29, 0x20, 0x3d, 
+	0x3d, 0x20, 0x22, 0x6e, 0x75, 0x6d, 0x62, 0x65, 0x72, 0x22, 0x20, 0x74, 0x68, 0x65, 0x6e, 0x0a,
+	0x09, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x72, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x20, 
+	0x3d, 0x20, 0x72, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x20, 0x2e, 0x2e, 0x20, 0x22, 0x20, 0x22, 0x20, 0x2e, 0x2e, 
+	0x20, 0x74, 0x6f, 0x73, 0x74, 0x72, 0x69, 0x6e, 0x67, 0x28, 0x76, 0x29, 0x20, 0x2e, 0x2e, 0x20, 0x22, 0x2c, 
+	0x22, 0x0a,
+	0x09, 0x09, 0x09, 0x09, 0x09, 0x65, 0x6c, 0x73, 0x65, 0x0a,
+	0x09, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x72, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x20, 
+	0x3d, 0x20, 0x72, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x20, 0x2e, 0x2e, 0x20, 0x74, 0x61, 0x62, 0x73, 0x20, 0x2e, 
+	0x2e, 0x20, 0x22, 0x20, 0x20, 0x22, 0x20, 0x2e, 0x2e, 0x20, 0x73, 0x65, 0x72, 0x69, 0x61, 0x6c, 0x69, 0x7a, 
+	0x65, 0x28, 0x76, 0x2c, 0x20, 0x74, 0x61, 0x62, 0x73, 0x20, 0x2e, 0x2e, 0x20, 0x22, 0x20, 0x20, 0x22, 0x29, 
+	0x20, 0x2e, 0x2e, 0x20, 0x22, 0x2c, 0x5c, 0x6e, 0x22, 0x0a,
+	0x09, 0x09, 0x09, 0x09, 0x09, 0x65, 0x6e, 0x64, 0x0a,
+	0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x65, 0x6c, 0x73, 0x65, 0x0a,
+	0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x72, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x20, 0x3d, 
+	0x20, 0x72, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x20, 0x2e, 0x2e, 0x20, 0x74, 0x61, 0x62, 0x73, 0x20, 0x2e, 0x2e, 
+	0x20, 0x22, 0x20, 0x20, 0x22, 0x20, 0x2e, 0x2e, 0x20, 0x6b, 0x20, 0x2e, 0x2e, 0x20, 0x22, 0x20, 0x3d, 0x20, 
+	0x22, 0x20, 0x2e, 0x2e, 0x20, 0x73, 0x65, 0x72, 0x69, 0x61, 0x6c, 0x69, 0x7a, 0x65, 0x28, 0x76, 0x2c, 0x20, 
+	0x74, 0x61, 0x62, 0x73, 0x20, 0x2e, 0x2e, 0x20, 0x22, 0x20, 0x20, 0x22, 0x29, 0x20, 0x2e, 0x2e, 0x20, 0x22, 
+	0x2c, 0x5c, 0x6e, 0x22, 0x0a,
+	0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x65, 0x6e, 0x64, 0x0a,
+	0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x65, 0x6e, 0x64, 0x0a,
+	0x20, 0x20, 0x20, 0x20, 0x65, 0x6e, 0x64, 0x0a,
+	0x20, 0x20, 0x20, 0x20, 0x72, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x20, 0x3d, 0x20, 0x72, 0x65, 0x73, 0x75, 0x6c, 
+	0x74, 0x20, 0x2e, 0x2e, 0x20, 0x74, 0x61, 0x62, 0x73, 0x20, 0x2e, 0x2e, 0x20, 0x22, 0x7d, 0x22, 0x0a,
+	0x20, 0x20, 0x65, 0x6c, 0x73, 0x65, 0x0a,
+	0x20, 0x20, 0x20, 0x20, 0x70, 0x72, 0x69, 0x6e, 0x74, 0x20, 0x28, 0x22, 0x69, 0x67, 0x6e, 0x6f, 0x72, 0x69, 
+	0x6e, 0x67, 0x20, 0x73, 0x74, 0x75, 0x66, 0x66, 0x22, 0x20, 0x2e, 0x2e, 0x20, 0x74, 0x79, 0x70, 0x65, 0x28, 
+	0x6f, 0x29, 0x20, 0x29, 0x0a,
+	0x20, 0x20, 0x65, 0x6e, 0x64, 0x0a,
+	0x20, 0x20, 0x72, 0x65, 0x74, 0x75, 0x72, 0x6e, 0x20, 0x72, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x0a,
+	0x65, 0x6e, 0x64, 0x0a,
+	0x72, 0x65, 0x74, 0x75, 0x72, 0x6e, 0x20, 0x73, 0x65, 0x72, 0x69, 0x61, 0x6c, 0x69, 0x7a, 0x65, 0x0a,
+};
+//
+// Lua Helper Functions
+//
 void bail(lua_State *L, const char *msg){
 	std::cerr << msg << lua_tostring(L, -1) << endl;
 	abort();
 }
 
-/** \brief Puts a lua value at a given path with optional index onto the stack.
- *
- * This function allows to navigate tables by specifying the path to an
- * element just as within lua, e.g. "model.bodies[2].inertia[2][3]". The
- * optional last parameter is used to ease iteration over multiple
- * elements.
- */
-bool get_table_from_path (lua_State *L, const char *path_str, const int index = -1);
-
-
-/* Proxy functions for ltXXXAt() calls */
-std::string ltGetString (lua_State *L, const char *path_str, const std::string &default_result) {
-	return ltGetStringAt (L, path_str, -1, default_result);
-}
-
-double ltGetDouble (lua_State *L, const char *path_str, const double &default_result) {
-	return ltGetDoubleAt (L, path_str, -1, default_result);
-}
-
-size_t ltGetLength (lua_State *L, const char *path_str) {
-	return ltGetLengthAt (L, path_str, -1);
-}
-
-std::vector<std::string> ltGetKeys (lua_State *L, const char *path_str) {
-	return ltGetKeysAt (L, path_str, -1);
-}
-
-std::vector<double> ltGetDoubleVector (lua_State *L, const char *path_str) {
-	return ltGetDoubleVectorAt (L, path_str, -1);
-}
-
-bool ltGetDoubleArray (lua_State *L, const char *path_str, const unsigned int count, double *dest) {
-	return ltGetDoubleArrayAt (L, path_str, count, dest, -1);
-}
-
-bool ltIsNumber (lua_State *L, const char *path_str) {
-	return ltIsNumberAt (L, path_str, -1);
-}
-
-bool ltIsExisting (lua_State *L, const char *path_str) {
-	return ltIsExistingAt (L, path_str, -1);
-}
-
-/* Actual interesting code */
-
-bool ltOpenFile (lua_State **L, const char *filename) {
-	*L = luaL_newstate();
-	luaL_openlibs(*L);
-
-	if (luaL_loadfile (*L, filename) || lua_pcall (*L, 0, 1, 0)) {
-		bail (*L, "Error running file: ");
-		return false;
-	}
-
-	return true;
-}
-
-void ltClose (lua_State **L) {
-	lua_close(*L);
-	*L = NULL;
-}
-
-std::string ltGetStringAt (lua_State *L, const char *path_str, const int index, const std::string &default_result) {
-	std::string result;
-
-	int stack_top = lua_gettop(L);
-
-	if (!get_table_from_path(L, path_str, index)) 
-		return default_result;
-
-	if (!lua_isstring(L, -1)) {
-		cout << "Error: value at " << path_str;
-		if (index > 0)
-			cout << "[" << index << "]";
-		cout << " is not a string!" << endl;
-
-		return default_result;
-	}
-
-	result = lua_tostring(L, -1);
-
-	// clean up the stack
-	lua_pop (L, lua_gettop(L) - stack_top);
-
-	return result;
-}
-
-double ltGetDoubleAt (lua_State *L, const char *path_str, const int index, const double &default_result) {
-	double result;
-	
-	int stack_top = lua_gettop(L);
-
-	if (!get_table_from_path(L, path_str, index)) 
-		return default_result;
-
-	if (!lua_isnumber(L, -1)) {
-		cout << "Error: value at " << path_str;
-		if (index > 0)
-			cout << "[" << index << "]";
-		cout << " is not a number!" << endl;
-
-		return default_result;
-	}
-
-	result = lua_tonumber(L, -1);
-
-	// clean up the stack
-	lua_pop (L, lua_gettop(L) - stack_top);
-
-	return result;
-}
-
-size_t ltGetLengthAt (lua_State *L, const char *path_str, const int index) {
-	size_t result = 0;
-	
-	int stack_top = lua_gettop(L);
-
-	if (!get_table_from_path(L, path_str, index)) 
-		return result;
-
-	result = lua_objlen (L, -1);
-
-	// clean up the stack
-	lua_pop (L, lua_gettop(L) - stack_top);
-
-	return result;
-}
-
-std::vector<std::string> ltGetKeysAt (lua_State *L, const char *path_str, const int index) {
-	std::vector<string> result;
-	
-	int stack_top = lua_gettop(L);
-
-	if (!get_table_from_path(L, path_str, index)) 
-		return result;
-
-	if (!lua_istable(L, -1)) {
-		cout << "Error: value at " << path_str;
-		if (index > 0)
-			cout << "[" << index << "]";
-		cout << " is not a table!" << endl;
-
-		// clean up the stack
-		lua_pop (L, lua_gettop(L) - stack_top);
-		return result;
-	}
-
-	lua_pushnil(L);
-
-	int i = 1;
-	while (lua_next(L, -2) != 0) {
-		if (lua_isnumber(L, -2)) {
-			// if top value is a number we convert it to a string using lua
-			// facilities. Note: lua_tostring modifies the value and can thus
-			// confuse the call of lua_next()!
-			lua_pushvalue(L, -2);
-			result.push_back(lua_tostring(L, -1));
-			lua_pop(L, 1);
-		} else if (lua_isstring(L, -2)) {
-			result.push_back (lua_tostring(L, -2));
-		}
-		else {
-			cout << "Error: values at " << path_str;
-			if (index > 0)
-				cout << "[" << index << "]";
-			cout << " is not a string!" << endl;
-
-			// clean up the stack
-			lua_pop (L, lua_gettop(L) - stack_top);
-			return std::vector<std::string>();
-		}
-
-		lua_pop(L, 1);
-		i++;
-	}
-
-	// clean up the stack
-	lua_pop (L, lua_gettop(L) - stack_top);
-
-	return result;
-}
-
-std::vector<double> ltGetDoubleVectorAt (lua_State *L, const char *path_str, const int index) {
-	std::vector<double> result;
-	
-	int stack_top = lua_gettop(L);
-
-	if (!get_table_from_path(L, path_str, index)) 
-		return result;
-
-	if (!lua_istable(L, -1)) {
-		cout << "Error: value at " << path_str;
-		if (index > 0)
-			cout << "[" << index << "]";
-		cout << " is not a table!" << endl;
-
-		// clean up the stack
-		lua_pop (L, lua_gettop(L) - stack_top);
-		return result;
-	}
-
-	lua_pushnil(L);
-
-	int i = 1;
-	while (lua_next(L, -2)) {
-		if (lua_isnumber (L, -1)) {
-			result.push_back (lua_tonumber(L, -1));
-		} else {
-			cout << "Error: values at " << path_str;
-			if (index > 0)
-				cout << "[" << index << "]";
-			cout << " are not numbers only!" << endl;
-
-			// clean up the stack
-			lua_pop (L, lua_gettop(L) - stack_top);
-			return std::vector<double>();
-		}
-		lua_pop(L, 1);
-		i++;
-	}
-
-	// clean up the stack
-	lua_pop (L, lua_gettop(L) - stack_top);
-
-	return result;
-}
-
-bool ltGetDoubleArrayAt (lua_State *L, const char *path_str, const unsigned int count, double *dest, const int index) {
-	std::vector<double> result;
-	
-	int stack_top = lua_gettop(L);
-
-	if (!get_table_from_path(L, path_str, index)) 
-		return false;
-
-	if (!lua_istable(L, -1)) {
-		cout << "Error: value at " << path_str;
-		if (index > 0)
-			cout << "[" << index << "]";
-		cout << " is not a table!" << endl;
-
-		// clean up the stack
-		lua_pop (L, lua_gettop(L) - stack_top);
-		return false;
-	}
-
-	lua_pushnil(L);
-
-	int i = 1;
-	while (lua_next(L, -2)) {
-		if (lua_isnumber (L, -1)) {
-			result.push_back (lua_tonumber(L, -1));
-		} else {
-			cout << "Error: values at " << path_str;
-			if (index > 0)
-				cout << "[" << index << "]";
-			cout << " are not numbers only!" << endl;
-
-			// clean up the stack
-			lua_pop (L, lua_gettop(L) - stack_top);
-			return false;
-		}
-		lua_pop(L, 1);
-		i++;
-	}
-
-	// clean up the stack
-	lua_pop (L, lua_gettop(L) - stack_top);
-
-	if (result.size() >= count) {
-		for (unsigned int i = 0; i < count; i++) {
-			dest[i] = result[i];
-		}
-		return true;
-	}
-
-	cout << "Error: Tried to read " << count << " values at " << path_str;
-	if (index > 0)
-		cout << "[" << index << "]";
-	cout << " but only found " << result.size() << " elements!" << endl;
-
-	return false;
-}
-
-bool ltIsNumberAt (lua_State *L, const char *path_str, const int index) {
-	bool result = false;
-
-	int stack_top = lua_gettop(L);
-
-	if (!get_table_from_path(L, path_str, index)) 
-		result = false;
-
-	if (lua_isnumber(L, -1)) {
-		result = true;
-	}
-
-	// clean up the stack
-	lua_pop (L, lua_gettop(L) - stack_top);
-
-	return result;
-}
-
-bool ltIsExistingAt (lua_State *L, const char *path_str, int index) {
-	int stack_top = lua_gettop(L);
-
-	if (!get_table_from_path(L, path_str, index)) {
-		return false;
-	}
-
-	lua_pop (L, lua_gettop(L) - stack_top);
-	return true;
-}
-
-/** \brief Extracts a single token from a path string */
-static std::string path_get_next_token (std::string &path) {
-	std::string token = path;
-
-	bool is_index = false;
-	bool have_bracket = false;
-
-	if (token.find(".") != std::string::npos) {
-		token = token.substr(0, token.find("."));
-	}
-
-	if (token.find("[") != std::string::npos) {
-		have_bracket = true;
-
-		if (token.find("[") == 0) {
-			token = token.substr (token.find("[") + 1, token.find("]") - 1);
-			path = path.substr (token.size() + 2, path.size());
-		} else {
-			token = token.substr (0, token.find("["));
-			path = path.substr (token.size(), path.size());
-		}
-	} else {
-		if (path.size() > token.size())
-			path = path.substr (token.size() + 1, path.size());
+void stack_print (const char *file, int line, lua_State *L) {
+	cout << file << ":" << line << ": stack size: " << lua_gettop(L) << endl;;
+	for (int i = 1; i < lua_gettop(L) + 1; i++) {
+		cout << file << ":" << line << ": ";
+		cout << i << ": ";
+		if (lua_istable (L, i))
+			cout << " table" << endl;
+		else if (lua_isnumber (L, i))
+			cout << " number: " << lua_tonumber (L, i) << endl;
+		else if (lua_isuserdata (L, i)) {
+			void* userdata = (void*) lua_touserdata (L, i);
+			cout << " userdata (" << userdata << ")" << endl;
+		} else if (lua_isstring (L, i))
+			cout << " string: " << lua_tostring(L, i) << endl;
+		else if (lua_isfunction (L, i))
+			cout << " function" << endl;
+		else if (lua_isnil (L, i))
+			cout << " nil" << endl;
 		else
-			path = "";
+			cout << " unknown: " << lua_typename (L, lua_type (L, i)) << endl;
 	}
-
-	if (path[0] == '.')
-		path = path.substr (1, path.size());
-
-	return token;
 }
 
-/** \brief Puts a lua value at a given path with optional index onto the stack.
- *
- * This function allows to navigate tables by specifying the path to an
- * element just as within lua, e.g. "model.bodies[2].inertia[2][3]". The
- * optional last parameter is used to ease iteration over multiple
- * elements.
- */
-bool get_table_from_path (lua_State *L, const char *path_str, const int index) {
-	std::string path = path_str;
-	std::string token = path;
+void l_push_LuaKey (lua_State *L, const LuaKey &key) {
+	if (key.type == LuaKey::Integer)
+		lua_pushnumber (L, key.int_value);
+	else
+		lua_pushstring(L, key.string_value.c_str());
+}
 
-	// backup of the current stack
-	int stack_top = lua_gettop(L);
+bool query_key_stack (lua_State *L, std::vector<LuaKey> key_stack) {
+	for (int i = key_stack.size() - 1; i >= 0; i--) {
+		// get the global value when the result of a lua expression was not
+		// pushed onto the stack via the return statement.
+		if (lua_gettop(L) == 0) {
+			lua_getglobal (L, key_stack[key_stack.size() - 1].string_value.c_str());
 
-	do {
-		token = path_get_next_token (path);
+			if (lua_isnil(L, -1)) {
+				return false;
+			}
 
-		istringstream convert (token);
-		int token_int;
-		if (!(convert >> token_int)) 
-			lua_pushstring(L, token.c_str());
-		else
-			lua_pushnumber (L, token_int);
+			continue;
+		}
+
+		l_push_LuaKey (L, key_stack[i]);
 
 		lua_gettable (L, -2);
 
-		if (path.size() == 0 && index > 0) {
-			lua_pushnumber (L, index);
-			lua_gettable (L, -2);
-		}
-
+		// return if key is not found
 		if (lua_isnil(L, -1)) {
-			// clean up the stack
-			lua_pop (L, lua_gettop(L) - stack_top);
 			return false;
 		}
-
-	} while (path.size() > 0);
+	}
 
 	return true;
+}
+
+void create_key_stack (lua_State *L, std::vector<LuaKey> key_stack) {
+	for (int i = key_stack.size() - 1; i > 0; i--) {
+		// get the global value when the result of a lua expression was not
+		// pushed onto the stack via the return statement.
+		if (lua_gettop(L) == 0) {
+			lua_getglobal (L, key_stack[key_stack.size() - 1].string_value.c_str());
+
+			if (lua_isnil(L, -1)) {
+				lua_pop(L, 1);
+				lua_newtable(L);
+				lua_pushvalue(L, -1);
+				lua_setglobal(L, key_stack[key_stack.size() - 1].string_value.c_str());
+			}
+
+			continue;
+		}
+
+		l_push_LuaKey (L, key_stack[i]);
+
+		lua_pushvalue (L, -1);
+		lua_gettable (L, -3);
+
+		if (lua_isnil(L, -1)) {
+			// parent, key, nil
+			lua_pop(L, 1);  // parent, key
+			lua_newtable(L); // parent, key, table
+			lua_insert(L, -2); // parent, table, key
+			lua_pushvalue(L, -2); // parent, table, key, table
+			lua_settable (L, -4); // parent, table
+		}
+	}
+}
+
+//
+// LuaTableNode
+//
+std::vector<LuaKey> LuaTableNode::getKeyStack() {
+	std::vector<LuaKey> result;
+
+	const LuaTableNode *node_ptr = this;
+
+	do {
+		result.push_back (node_ptr->key);
+		node_ptr = node_ptr->parent;
+	} while (node_ptr != NULL);
+
+	return result;	
+}
+
+std::string LuaTableNode::keyStackToString() {
+	std::vector<LuaKey> key_stack = getKeyStack();
+
+	ostringstream result_stream ("");
+	for (int i = key_stack.size() - 1; i >= 0; i--) {
+		if (key_stack[i].type == LuaKey::String)
+			result_stream << "[\"" << key_stack[i].string_value << "\"]";
+		else 
+			result_stream << "[" << key_stack[i].int_value << "]";
+	}
+
+	return result_stream.str();
+}
+
+bool LuaTableNode::stackQueryValue() {
+	lua_State *L = luaTable->L;
+	stackTop = lua_gettop(L);
+
+	std::vector<LuaKey> key_stack = getKeyStack();
+
+	return query_key_stack (L, key_stack);
+}
+
+void LuaTableNode::stackCreateValue() {
+	lua_State *L = luaTable->L;
+	stackTop = lua_gettop(L);
+
+	std::vector<LuaKey> key_stack = getKeyStack();
+
+	create_key_stack (L, key_stack);
+}
+
+LuaTable LuaTableNode::stackQueryTable() {
+	lua_State *L = luaTable->L;
+	stackTop = lua_gettop(L);
+
+	std::vector<LuaKey> key_stack = getKeyStack();
+
+	if (!query_key_stack (L, key_stack)) {
+		std::cerr << "Error: could not query table " << key << "." << std::endl;
+		abort();
+	}
+
+	return LuaTable::fromLuaState (L);
+}
+
+LuaTable LuaTableNode::stackCreateLuaTable() {
+	lua_State *L = luaTable->L;
+	stackTop = lua_gettop(L);
+
+	std::vector<LuaKey> key_stack = getKeyStack();
+
+	create_key_stack (L, key_stack);
+
+	// create new table for the CustomType
+	lua_newtable(luaTable->L);	// parent, CustomTable
+	// add table of CustomType to the parent
+	stackPushKey(); // parent, CustomTable, key
+	lua_pushvalue(luaTable->L, -2); // parent, CustomTable, key, CustomTable
+	lua_settable(luaTable->L, -4);
+
+	return LuaTable::fromLuaState (L);
+}
+
+void LuaTableNode::stackPushKey() {
+	l_push_LuaKey (luaTable->L, key);
+}
+
+void LuaTableNode::stackRestore() {
+	lua_pop (luaTable->L, lua_gettop(luaTable->L) - stackTop);
+}
+
+bool LuaTableNode::exists() {
+	bool result = true;
+
+	if (!stackQueryValue())
+		result = false;
+
+	stackRestore();
+
+	return result;
+}
+
+void LuaTableNode::remove() {
+	if (stackQueryValue()) {
+		lua_pop(luaTable->L, 1);
+
+		if (lua_gettop(luaTable->L) != 0) {
+			l_push_LuaKey (luaTable->L, key);
+			lua_pushnil (luaTable->L);
+			lua_settable (luaTable->L, -3); 
+		} else {
+			lua_pushnil (luaTable->L);
+			lua_setglobal (luaTable->L, key.string_value.c_str());
+		}
+	}
+
+	stackRestore();
+}
+
+size_t LuaTableNode::length() {
+	size_t result = 0;
+
+	if (stackQueryValue()) {
+		result = lua_objlen(luaTable->L, -1);
+	}
+
+	stackRestore();
+
+	return result;
+}
+
+std::vector<LuaKey> LuaTableNode::keys() {
+	std::vector<LuaKey> result;
+
+	if (stackQueryValue()) {
+		// loop over all keys
+		lua_pushnil(luaTable->L);
+		while (lua_next(luaTable->L, -2) != 0) {
+			if (lua_isnumber(luaTable->L, -2)) {
+				double number = lua_tonumber (luaTable->L, -2);
+				double frac;
+				if (modf (number, &frac) == 0) {
+					LuaKey key (static_cast<int>(number));
+					result.push_back (key);
+				}
+			} else if (lua_isstring (luaTable->L, -2)) {
+				LuaKey key (lua_tostring(luaTable->L, -2));
+				result.push_back (key);
+			} else {
+				cerr << "Warning: invalid LuaKey type for key " << 				lua_typename(luaTable->L, lua_type(luaTable->L, -2)) << "!" << endl;
+			}
+
+			lua_pop(luaTable->L, 1);
+		}
+	}
+
+	stackRestore();
+
+	return result;
+}
+
+
+template<> bool LuaTableNode::getDefault<bool>(const bool &default_value) {
+	bool result = default_value;
+
+	if (stackQueryValue()) {
+		result = lua_toboolean (luaTable->L, -1);
+	}
+
+	stackRestore();
+
+	return result;
+}
+
+template<> float LuaTableNode::getDefault<float>(const float &default_value) {
+	float result = default_value;
+
+	if (stackQueryValue()) {
+		result = static_cast<float>(lua_tonumber (luaTable->L, -1));
+	}
+
+	stackRestore();
+
+	return result;
+}
+
+template<> double LuaTableNode::getDefault<double>(const double &default_value) {
+	double result = default_value;
+
+	if (stackQueryValue()) {
+		result = lua_tonumber (luaTable->L, -1);
+	}
+
+	stackRestore();
+
+	return result;
+}
+
+template<> std::string LuaTableNode::getDefault<std::string>(const std::string &default_value) {
+	std::string result = default_value;
+
+	if (stackQueryValue() && lua_isstring(luaTable->L, -1)) {
+		result = lua_tostring (luaTable->L, -1);
+	}
+
+	stackRestore();
+
+	return result;
+}
+
+template<> void LuaTableNode::set<bool>(const bool &value) {
+	stackCreateValue();
+
+	l_push_LuaKey (luaTable->L, key);
+	lua_pushboolean(luaTable->L, value);
+	// stack: parent, key, value
+	lua_settable (luaTable->L, -3);
+
+	stackRestore();
+}
+
+template<> void LuaTableNode::set<float>(const float &value) {
+	stackCreateValue();
+
+	l_push_LuaKey (luaTable->L, key);
+	lua_pushnumber(luaTable->L, static_cast<double>(value));
+	// stack: parent, key, value
+	lua_settable (luaTable->L, -3);
+
+	stackRestore();
+}
+
+template<> void LuaTableNode::set<double>(const double &value) {
+	stackCreateValue();
+
+	l_push_LuaKey (luaTable->L, key);
+	lua_pushnumber(luaTable->L, value);
+	// stack: parent, key, value
+	lua_settable (luaTable->L, -3);
+
+	stackRestore();
+}
+
+template<> void LuaTableNode::set<std::string>(const std::string &value) {
+	stackCreateValue();
+
+	l_push_LuaKey (luaTable->L, key);
+	lua_pushstring(luaTable->L, value.c_str());
+	// stack: parent, key, value
+	lua_settable (luaTable->L, -3);
+
+	stackRestore();
+}
+
+//
+// LuaTable
+//
+LuaTable::~LuaTable() {
+	if (deleteLuaState) {
+		lua_close(L);
+		L = NULL;
+	}
+}
+
+int LuaTable::length() {
+	if ((lua_gettop(L) == 0) || (lua_type (L, -1) != LUA_TTABLE)) {
+		cerr << "Error: cannot query table length. No table on stack!" << endl;
+		abort();
+	}
+	size_t result = 0;
+
+	result = lua_objlen(L, -1);
+
+	return result;
+}
+
+LuaTable& LuaTable::operator= (const LuaTable &luatable) {
+	if (this != &luatable) {
+		if (deleteLuaState && L != luatable.L) {
+			lua_close (luatable.L);
+		}
+		filename = luatable.filename;
+		L = luatable.L;
+		deleteLuaState = luatable.deleteLuaState;
+	}
+
+	return *this;
+}
+
+LuaTable LuaTable::fromFile (const char* _filename) {
+	LuaTable result;
+	
+	result.filename = _filename;
+	result.L = luaL_newstate();
+	result.deleteLuaState = true;
+	luaL_openlibs(result.L);
+
+	// Add the directory of _filename to package.path
+	result.addSearchPath(get_file_directory (_filename).c_str());
+
+	// run the file we 
+	if (luaL_dofile (result.L, _filename)) {
+		bail (result.L, "Error running file: ");
+	}
+
+	return result;
+}
+
+LuaTable LuaTable::fromLuaExpression (const char* lua_expr) {
+	LuaTable result;
+	
+	result.L = luaL_newstate();
+	result.deleteLuaState = true;
+	luaL_openlibs(result.L);
+
+	if (luaL_loadstring (result.L, lua_expr)) {
+		bail (result.L, "Error compiling expression!");
+	}
+
+	if (lua_pcall (result.L, 0, LUA_MULTRET, 0)) {
+		bail (result.L, "Error running expression!");
+	}
+
+	return result;
+}
+
+LuaTable LuaTable::fromLuaState (lua_State* L) {
+	LuaTable result;
+	
+	result.L = L;
+	result.deleteLuaState = false;
+
+	return result;
+}
+
+void LuaTable::addSearchPath(const char* path) {
+	if (L == NULL) {
+		cerr << "Error: Cannot add search path: Lua state is not initialized!" << endl;
+		abort();
+	}
+
+	lua_getglobal(L, "package");
+	lua_getfield (L, -1, "path");
+	if (lua_type(L, -1) != LUA_TSTRING) {
+		cerr << "Error: could not get package.path!" << endl;
+		abort();
+	}
+
+	string package_path = lua_tostring (L, -1);
+	package_path = package_path + string(path) + "?.lua;";
+
+	lua_pushstring(L, package_path.c_str());
+	lua_setfield (L, -3, "path");
+
+	lua_pop(L, 2);
+}
+
+std::string LuaTable::serialize() {
+	std::string result;
+
+	int current_top = lua_gettop(L);
+	if (lua_gettop(L) != 0) {
+		if (luaL_loadstring(L, serialize_std)) {
+			bail (L, "Error loading serialization function: ");
+		}
+
+		if (lua_pcall(L, 0, 0, 0)) {
+			bail (L, "Error compiling serialization function: " );
+		}
+
+		lua_getglobal (L, "serialize");
+		assert (lua_isfunction (L, -1));
+		lua_pushvalue (L, -2);
+		if (lua_pcall (L, 1, 1, 0)) {
+			bail (L, "Error while serializing: ");
+		}
+		result = string("return ") + lua_tostring (L, -1);
+	} else {
+		cerr << "Cannot serialize global Lua state!" << endl;
+		abort();
+	}
+
+	lua_pop (L, lua_gettop(L) - current_top);
+
+	return result;
 }
