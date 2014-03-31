@@ -4,11 +4,11 @@ Copyright (c) 2011-2013 Martin Felis <martin.felis@iwr.uni-heidelberg.de>
 Introduction
 ============
 
-The RBDL is a highly efficient C++ library that contains some essential
-rigid body dynamics algorithms such as the Articulated Body Algorithm (ABA)
-for forward dynamics, Newton-Euler Algorithm for inverse dynamics and the
-Composite Rigid Body Algorithm (CRBA) for the efficient computation of
-the joint space inertia matrix. It further contains code for forward and
+RBDL is a highly efficient C++ library that contains some essential rigid
+body dynamics algorithms such as the Articulated Body Algorithm (ABA) for
+forward dynamics, Newton-Euler Algorithm for inverse dynamics and the
+Composite Rigid Body Algorithm (CRBA) for the efficient computation of the
+joint space inertia matrix. It further contains code for forward and
 inverse kinematics and handling of external constraints such as contacts
 and collisions.
 
@@ -18,6 +18,17 @@ Body Dynamics Algorithm".
 
 Recent Changes
 ==============
+   * 14 March 2014: New version 2.3.0:
+     * Joint Space Inertia Matrix does not get cleared anymore when calling CompositeRigidBodyAlgorithm
+     * using the default column-major ordering when using Eigen3
+     * added experimental joint type JointTypeEulerZYX
+     * added energy computations Utils::CalcCenterOfMass, Utils::CalcPotentialEnergy, Utils::CalcKineticEnergy, and Utils::CalcAngularMomentum.
+     * Updated URDF loader for ROS Groovy/Hydro (thanks to Benjamin Chrétien!)
+   * 06 November 2013: New version 2.2.2: adjusted Body default constructor (inertia matrix now 3x3 identity instead of zero matrix)
+   * 04 November 2013: New version 2.2.1: fixed exported library version
+   * 28 October 2013: New version 2.2.0: added support for spherical joints that do not suffer from joint singularities
+   * 29 September 2013: New version 2.1.0: adjusted build settings and symbol export to be debian compatible. Removed vendor code such as Lua 5.2 and UnitTest++. Must be pre-installed if tests or LuaModel Addon is enabled.
+   * 05 September 2013: New version 2.0.1: fixed some errors on older compilers and CMake configuration of examples. No changes required when migrating from 2.0.0.
    * 18 July 2013: API version 2.0.0: removed Eigen3 sources, removed Model::Init(), inverted sign of contact forces/impulses
    * 20 February 2013: removed too specialized RigidBodyDynamics::Body constructor (API version 1.1.0)
    * 29 January 2013: added code for api_version_checking. Current API version is 1.0.0.
@@ -74,7 +85,7 @@ a separate directory in Release mode use:
 
 For optimal performance it is highly recommended to install the Eigen3
 linear algebra library from
-[http://eigen.tuxfamily.org]([http://eigen.tuxfamily.org]). RBDL also
+[http://eigen.tuxfamily.org](http://eigen.tuxfamily.org). RBDL also
 comes with a simple, albeit much slower math library (SimpleMath) that can
 be used by enabling `RBDL_USE_SIMPLE_MATH`, i.e.:
 
@@ -89,7 +100,7 @@ license which should allow you to use the software wherever you need.
 This is the full license text (zlib license):
 
     RBDL - Rigid Body Dynamics Library
-    Copyright (c) 2011-2012 Martin Felis <martin.felis@iwr.uni-heidelberg.de>
+    Copyright (c) 2011-2013 Martin Felis <martin.felis@iwr.uni-heidelberg.de>
     
     This software is provided 'as-is', without any express or implied
     warranty. In no event will the authors be held liable for any damages
@@ -105,7 +116,7 @@ This is the full license text (zlib license):
        appreciated but is not required.
     
        2. Altered source versions must be plainly marked as such, and must not
-			 be misrepresented as being the original software.
+       be misrepresented as being the original software.
     
        3. This notice may not be removed or altered from any source
        distribution.

@@ -5,10 +5,15 @@ CMAKE_MINIMUM_REQUIRED (VERSION 2.6)
 # Needed for UnitTest++
 LIST( APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/../CMake )
 
+# Look for unittest++
+FIND_PACKAGE (UnitTest++ REQUIRED)
+INCLUDE_DIRECTORIES (${UNITTEST++_INCLUDE_DIR})
+
 SET ( TESTS_SRCS
 	main.cc
 	MathTests.cc
 	SpatialAlgebraTests.cc
+	SphericalJointTests.cc
 	KinematicsTests.cc
 	BodyTests.cc
 	ModelTests.cc
@@ -21,6 +26,7 @@ SET ( TESTS_SRCS
 	ImpulsesTests.cc
 	TwolegModelTests.cc
 	ContactsTests.cc
+	UtilsTests.cc
 	)
 
 INCLUDE_DIRECTORIES ( ../src/ )
@@ -37,7 +43,7 @@ SET_TARGET_PROPERTIES ( rbdl_tests PROPERTIES
 	)
 
 TARGET_LINK_LIBRARIES ( rbdl_tests
-		unittest++
+		${UNITTEST++_LIBRARY}
 		rbdl	
 	)
 	
