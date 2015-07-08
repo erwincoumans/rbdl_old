@@ -81,6 +81,7 @@ cdef extern from "<rbdl/SpatialAlgebraOperators.h>" namespace "RigidBodyDynamics
 cdef extern from "<rbdl/Body.h>" namespace "RigidBodyDynamics":
     cdef cppclass Body:
         Body()
+        Body(const double mass, const Vector3d &com, const Matrix3d &inertia)
         double mMass
         Vector3d mCenterOfMass
         Matrix3d mInertia
@@ -192,9 +193,28 @@ cdef extern from "<rbdl/Kinematics.h>" namespace "RigidBodyDynamics":
             const VectorNd &qdot,
             const VectorNd &qddot)
 
-cdef extern from "<rbdl/Dynamics.h>" namespace "RigidBodyDynamics":
-    cdef void CompositeRigidBodyAlgorithm (Model& model,
-            const VectorNd &q,
-            MatrixNd &H,
+cdef extern from "rbdl_ptr_functions.h" namespace "RigidBodyDynamics":
+    cdef void InverseDynamicsPtr (
+            Model &model,
+            const double* q_ptr,
+            const double* qdot_ptr,
+            const double* qddot_ptr,
+            double* tau_ptr,
+            vector[SpatialVector] *f_ext
+            ) 
+
+    cdef void CompositeRigidBodyAlgorithmPtr (Model& model,
+            const double *q,
+            double *H,
             bool update_kinematics)
+
+    cdef void ForwardDynamicsPtr (
+            Model &model,
+            const double* q_ptr,
+            const double* qdot_ptr,
+            double* tau_ptr,
+            const double* qddot_ptr,
+            vector[SpatialVector] *f_ext
+            ) 
+
 
