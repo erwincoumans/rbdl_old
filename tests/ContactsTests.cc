@@ -107,7 +107,16 @@ TEST ( TestForwardDynamicsContactsDirectSimple ) {
 	Model model;
 	model.gravity = Vector3d  (0., -9.81, 0.);
 	Body base_body (1., Vector3d (0., 0., 0.), Vector3d (1., 1., 1.));
-	unsigned int base_body_id = model.SetFloatingBaseBody(base_body);
+	unsigned int base_body_id = model.AddBody (0, SpatialTransform(), 
+			Joint (
+				SpatialVector (0., 0., 0., 1., 0., 0.),
+				SpatialVector (0., 0., 0., 0., 1., 0.),
+				SpatialVector (0., 0., 0., 0., 0., 1.),
+				SpatialVector (0., 0., 1., 0., 0., 0.),
+				SpatialVector (0., 1., 0., 0., 0., 0.),
+				SpatialVector (1., 0., 0., 0., 0., 0.)
+				),
+			base_body);
 
 	VectorNd Q = VectorNd::Constant ((size_t) model.dof_count, 0.);
 	VectorNd QDot = VectorNd::Constant ((size_t) model.dof_count, 0.);
@@ -159,7 +168,17 @@ TEST ( TestForwardDynamicsContactsDirectMoving ) {
 	Model model;
 	model.gravity = Vector3d  (0., -9.81, 0.);
 	Body base_body (1., Vector3d (0., 0., 0.), Vector3d (1., 1., 1.));
-	unsigned int base_body_id = model.SetFloatingBaseBody(base_body);
+	unsigned int base_body_id = model.AddBody (0, SpatialTransform(), 
+			Joint (
+				SpatialVector (0., 0., 0., 1., 0., 0.),
+				SpatialVector (0., 0., 0., 0., 1., 0.),
+				SpatialVector (0., 0., 0., 0., 0., 1.),
+				SpatialVector (0., 0., 1., 0., 0., 0.),
+				SpatialVector (0., 1., 0., 0., 0., 0.),
+				SpatialVector (1., 0., 0., 0., 0., 0.)
+				),
+			base_body);
+
 
 	VectorNd Q = VectorNd::Constant ((size_t) model.dof_count, 0.);
 	VectorNd QDot = VectorNd::Constant ((size_t) model.dof_count, 0.);
@@ -673,8 +692,8 @@ TEST_FIXTURE (Human36, ForwardDynamicsContactsFixedBody) {
 	ForwardDynamicsContactsRangeSpaceSparse (*model_3dof, q, qdot, tau, constraint_upper_trunk, qddot_sparse);
 	ForwardDynamicsContactsKokkevis (*model_3dof, q, qdot, tau, constraint_upper_trunk, qddot);
 
-	CHECK_ARRAY_CLOSE (qddot_lagrangian.data(), qddot.data(), qddot_lagrangian.size(), TEST_PREC * qddot_lagrangian.norm());
-	CHECK_ARRAY_CLOSE (qddot_lagrangian.data(), qddot_sparse.data(), qddot_lagrangian.size(), TEST_PREC * qddot_lagrangian.norm());
+	CHECK_ARRAY_CLOSE (qddot_lagrangian.data(), qddot.data(), qddot_lagrangian.size(), TEST_PREC * qddot_lagrangian.norm() * 10.);
+	CHECK_ARRAY_CLOSE (qddot_lagrangian.data(), qddot_sparse.data(), qddot_lagrangian.size(), TEST_PREC * qddot_lagrangian.norm() * 10.);
 }
 
 TEST_FIXTURE (Human36, ForwardDynamicsContactsImpulses) {
