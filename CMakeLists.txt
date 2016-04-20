@@ -56,6 +56,7 @@ OPTION (RBDL_STORE_VERSION "Enable storing of version information in the library
 OPTION (RBDL_BUILD_ADDON_URDFREADER "Build the (experimental) urdf reader" OFF)
 OPTION (RBDL_BUILD_ADDON_BENCHMARK "Build the benchmarking tool" OFF)
 OPTION (RBDL_BUILD_ADDON_LUAMODEL "Build the lua model reader" OFF)
+OPTION (RBDL_BUILD_PYTHON_WRAPPER "Build experimental python wrapper" OFF)
 
 # Addons
 IF (RBDL_BUILD_ADDON_URDFREADER)
@@ -86,13 +87,6 @@ SET ( RBDL_SOURCES
 	src/Model.cc
 	src/Kinematics.cc
 	)
-
-# If compiler support symbol visibility, enable it.
-INCLUDE (CheckCCompilerFlag)
-CHECK_C_COMPILER_FLAG(-fvisibility=hidden HAS_VISIBILITY)
-IF (HAS_VISIBILITY)
-  SET (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden")
-ENDIF ()
 
 # Static / dynamic builds
 IF (RBDL_BUILD_STATIC)
@@ -140,6 +134,23 @@ CONFIGURE_FILE (
 	"${CMAKE_CURRENT_SOURCE_DIR}/include/rbdl/rbdl_config.h.cmake" 
 	"${CMAKE_CURRENT_BINARY_DIR}/include/rbdl/rbdl_config.h"
 	)
+
+# Python wrapper
+IF (RBDL_BUILD_PYTHON_WRAPPER)
+	SET (Python_ADDITIONAL_VERSIONS 2.7)
+	INCLUDE ( UseCython )
+
+	add_custom_target( ReplicatePythonSourceTree ALL ${CMAKE_COMMAND} -P
+		${CMAKE_CURRENT_SOURCE_DIR}/CMake/ReplicatePythonSourceTree.cmake
+		${CMAKE_CURRENT_BINARY_DIR}
+		WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/python )
+	add_subdirectory ( python )
+
+	CONFIGURE_FILE (
+		${CMAKE_CURRENT_SOURCE_DIR}/python/setup.py.cmake
+		${CMAKE_CURRENT_BINARY_DIR}/setup.py
+		)
+ENDIF (RBDL_BUILD_PYTHON_WRAPPER)
 
 # Installation
 FILE ( GLOB headers 
