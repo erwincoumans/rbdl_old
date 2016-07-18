@@ -194,7 +194,7 @@ class Quaternion : public Vector4d {
     *
     */
     Vector4d omegaToQDot(const Vector3d& omega) const {
-      Eigen::Matrix<double, 4, 3> m;
+      Math::Matrix43 m;
       m(0, 0) =  (*this)[3];   m(0, 1) = -(*this)[2];   m(0, 2) =  (*this)[1];
       m(1, 0) =  (*this)[2];   m(1, 1) =  (*this)[3];   m(1, 2) = -(*this)[0];
       m(2, 0) = -(*this)[1];   m(2, 1) =  (*this)[0];   m(2, 2) =  (*this)[3];
