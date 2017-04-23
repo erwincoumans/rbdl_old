@@ -1,6 +1,6 @@
 /*
  * RBDL - Rigid Body Dynamics Library
- * Copyright (c) 2011-2016 Martin Felis <martin.felis@iwr.uni-heidelberg.de>
+ * Copyright (c) 2011-2016 Martin Felis <martin@fysx.org>
  *
  * Licensed under the zlib license. See LICENSE for more details.
  */
@@ -220,12 +220,6 @@ unsigned int AddBodyMultiDofJoint (
         single_dof_joint = Joint (JointTypePrismatic, translation);
       } else if (translation == Vector3d (0., 0., 0.)) {
         single_dof_joint = Joint (JointTypeRevolute, rotation);
-      } else {
-        std::cerr << "Invalid joint axis: " 
-          << joint.mJointAxes[0].transpose() 
-          << ". Helical joints not (yet) supported."
-          << std::endl;
-        abort();
       }
     }
 
@@ -286,6 +280,7 @@ unsigned int Model::AddBody(
       && joint.mJointType != JointTypeRevoluteX
       && joint.mJointType != JointTypeRevoluteY
       && joint.mJointType != JointTypeRevoluteZ
+      && joint.mJointType != JointTypeHelical
       ) {
     previously_added_body_id = AddBodyMultiDofJoint (*this, 
         parent_id, 

@@ -657,6 +657,16 @@ void CalcConstrainedSystemVariables (
   for (unsigned int i = 0; i < CS.loopConstraintIndices.size(); i++) {
     const unsigned int c = CS.loopConstraintIndices[i];
 
+    // Variables used for computations.
+    Vector3d pos_p;
+    Matrix3d rot_p;
+    SpatialVector vel_p;
+    SpatialVector vel_s;
+    SpatialVector axis;
+    unsigned int id_p;
+    unsigned int id_s;
+
+
     // Express the constraint axis in the base frame.
     Vector3d pos_p = CalcBodyToBaseCoordinates (model, Q, CS.body_p[c]
       , CS.X_p[c].r, false);
