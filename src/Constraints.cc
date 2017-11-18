@@ -6,6 +6,7 @@
  */
 
 #include <iostream>
+#include <sstream>
 #include <limits>
 #include <assert.h>
 
@@ -50,7 +51,7 @@ unsigned int ConstraintSet::AddContactConstraint (
 
   constraintType.push_back (ContactConstraint);
   name.push_back (name_str);
-  contactConstraintIndices.push_back(size());
+  mContactConstraintIndices.push_back(size());
 
   // These variables will be used for this type of constraint.
   body.push_back (body_id);
@@ -135,7 +136,7 @@ unsigned int ConstraintSet::AddLoopConstraint (
 
   constraintType.push_back(LoopConstraint);
   name.push_back (name_str);
-  loopConstraintIndices.push_back(size());
+  mLoopConstraintIndices.push_back(size());
 
   // These variables will be used for this kind of constraint.
   body_p.push_back (id_predecessor);
@@ -174,6 +175,88 @@ unsigned int ConstraintSet::AddLoopConstraint (
   d_multdof3_u = std::vector<Math::Vector3d>(n_constr, Math::Vector3d::Zero());
 
   return n_constr - 1;
+}
+
+
+unsigned int ConstraintSet::AddCustomConstraint(
+        CustomConstraint *customConstraint,
+        unsigned int id_predecessor,
+        unsigned int id_successor,
+        const Math::SpatialTransform &X_predecessor,
+        const Math::SpatialTransform &X_successor,
+        bool baumgarte_enabled,
+        double T_stabilization,
+        const char *constraint_name)
+{
+  if (baumgarte_enabled && T_stabilization == 0.) {
+    std::cerr << "Error: Given T_stab_inv is 0, but this would cause the "
+                 "stabilization parameter to be INF which is forbidden."
+              << std::endl;
+    abort();
+  }
+
+  assert (bound == false);
+
+  unsigned int n_constr_start_idx = size();
+  unsigned int n_constr_size      = size() + customConstraint->mConstraintCount;
+
+  std::string name_str;
+  if (constraint_name != NULL) {
+    name_str = constraint_name;
+  }
+
+  SpatialVector axis = SpatialVector::Zero();
+  std::stringstream nameConstraintIndex;
+
+  for(unsigned int i = 0; i < customConstraint->mConstraintCount; ++i ){
+      constraintType.push_back( ConstraintTypeCustom );
+      nameConstraintIndex << name_str << "_" << i;
+      name.push_back (nameConstraintIndex.str());
+      nameConstraintIndex.str(std::string());
+      if(i==0){
+        mCustomConstraintIndices.push_back(n_constr_start_idx);
+      }
+      // These variables will be used for each CustomConstraint
+      body_p.push_back (id_predecessor);
+      body_s.push_back (id_successor);
+      X_p.push_back (X_predecessor);
+      X_s.push_back (X_successor);
+      constraintAxis.push_back (axis);
+      if (baumgarte_enabled) {
+        T_stab_inv.push_back (1. / T_stabilization);
+      } else {
+        T_stab_inv.push_back (0.);
+      }
+      // These variables will not be used in CustomConstraints but are kept
+      // so that the indexing across all of the ConstraintSet variables
+      // remains preserved.
+      body.push_back (0);
+      point.push_back (Vector3d::Zero());
+      normal.push_back (Vector3d::Zero());
+  }
+
+  err.conservativeResize( n_constr_size);
+  errd.conservativeResize(n_constr_size);
+
+  acceleration.conservativeResize ( n_constr_size);
+  force.conservativeResize (        n_constr_size);
+  impulse.conservativeResize (      n_constr_size);
+  v_plus.conservativeResize (       n_constr_size);
+  d_multdof3_u = std::vector<Math::Vector3d>(
+                  n_constr_size, Math::Vector3d::Zero());
+
+  for(unsigned int i = n_constr_start_idx; i < n_constr_size; i++){
+      err[i]          = 0.;
+      errd[i]         = 0.;
+      acceleration[i] = 0.;
+      force[i]        = 0.;
+      impulse[i]      = 0.;
+      v_plus[i]       = 0.;
+  }
+
+   mCustomConstraints.push_back(customConstraint);
+
+  return n_constr_size - 1;
 }
 
 bool ConstraintSet::Bind (const Model &model) {
@@ -229,13 +312,13 @@ bool ConstraintSet::Bind (const Model &model) {
   f_ext_constraints.resize (model.mBodies.size(), SpatialVector::Zero());
   point_accel_0.resize (n_constr, Vector3d::Zero());
 
-  d_pA = std::vector<SpatialVector> (model.mBodies.size(), SpatialVector::Zero());
-  d_a = std::vector<SpatialVector> (model.mBodies.size(), SpatialVector::Zero());
+  d_pA =std::vector<SpatialVector> (model.mBodies.size(),SpatialVector::Zero());
+  d_a = std::vector<SpatialVector> (model.mBodies.size(),SpatialVector::Zero());
   d_u = VectorNd::Zero (model.mBodies.size());
 
   d_IA = std::vector<SpatialMatrix> (model.mBodies.size()
     , SpatialMatrix::Identity());
-  d_U = std::vector<SpatialVector> (model.mBodies.size(), SpatialVector::Zero());
+  d_U = std::vector<SpatialVector> (model.mBodies.size(),SpatialVector::Zero());
   d_d = VectorNd::Zero (model.mBodies.size());
 
   d_multdof3_u = std::vector<Math::Vector3d> (model.mBodies.size()
@@ -446,13 +529,13 @@ void CalcConstraintsPositionError (
     UpdateKinematicsCustom (model, &Q, NULL, NULL);
   }
 
-  for (unsigned int i = 0; i < CS.contactConstraintIndices.size(); i++) {
-    const unsigned int c = CS.contactConstraintIndices[i];
+  for (unsigned int i = 0; i < CS.mContactConstraintIndices.size(); i++) {
+    const unsigned int c = CS.mContactConstraintIndices[i];
     err[c] = 0.;
   }
 
-  for (unsigned int i = 0; i < CS.loopConstraintIndices.size(); i++) {
-    const unsigned int lci = CS.loopConstraintIndices[i];
+  for (unsigned int i = 0; i < CS.mLoopConstraintIndices.size(); i++) {
+    const unsigned int lci = CS.mLoopConstraintIndices[i];
 
     // Variables used for computations.
     Vector3d pos_p;
@@ -497,6 +580,11 @@ void CalcConstraintsPositionError (
     // Project the error on the constraint axis to find the actual error.
     err[lci] = CS.constraintAxis[lci].transpose() * d;
   } 
+
+  for (unsigned int i = 0; i < CS.mCustomConstraintIndices.size(); i++) {
+    const unsigned int cci = CS.mCustomConstraintIndices[i];
+    CS.mCustomConstraints[i]->CalcPositionError(model,cci,Q,CS,err, cci);    
+  }
 }
 
 RBDL_DLLAPI
@@ -517,8 +605,8 @@ void CalcConstraintsJacobian (
   SpatialTransform prev_body_X_1;
   SpatialTransform prev_body_X_2;
 
-  for (unsigned int i = 0; i < CS.contactConstraintIndices.size(); i++) {
-    const unsigned int c = CS.contactConstraintIndices[i];
+  for (unsigned int i = 0; i < CS.mContactConstraintIndices.size(); i++) {
+    const unsigned int c = CS.mContactConstraintIndices[i];
 
     // only compute the matrix Gi if actually needed
     if (prev_body_id_1 != CS.body[c] 
@@ -546,8 +634,8 @@ void CalcConstraintsJacobian (
   Matrix3d rot_p;
   SpatialTransform X_0p;
 
-  for (unsigned int i = 0; i < CS.loopConstraintIndices.size(); i++) {
-    const unsigned int c = CS.loopConstraintIndices[i];
+  for (unsigned int i = 0; i < CS.mLoopConstraintIndices.size(); i++) {
+    const unsigned int c = CS.mLoopConstraintIndices[i];
 
     // Only recompute variables if necessary.
     if( prev_body_id_1 != CS.body_p[c]
@@ -584,6 +672,15 @@ void CalcConstraintsJacobian (
     // Compute the constraint Jacobian row.
     G.block(c, 0, 1, model.dof_count) = axis.transpose() * CS.GSJ;
   }
+
+  // Go and get the CustomConstraint Jacobians
+  for (unsigned int i = 0; i < CS.mCustomConstraintIndices.size(); i++) {
+    const unsigned int cci = CS.mCustomConstraintIndices[i];
+    const unsigned int rows= CS.mCustomConstraints[i]->mConstraintCount;
+    const unsigned int cols= CS.G.cols();
+    CS.mCustomConstraints[i]->CalcConstraintsJacobianAndConstraintAxis(
+                                 model,cci,Q,CS,CS.G, cci,0);
+  }
 }
 
 RBDL_DLLAPI
@@ -595,9 +692,25 @@ void CalcConstraintsVelocityError (
   Math::VectorNd& err,
   bool update_kinematics
   ) {
-  MatrixNd G(MatrixNd::Zero(CS.size(), model.dof_count));
-  CalcConstraintsJacobian (model, Q, CS, G, update_kinematics);
-  err = G * QDot;
+  
+  //This works for the contact and loop constraints because they are
+  //time invariant. But this does not necessarily work for the CustomConstraints
+  //which can be time-varying. And thus the parts of err associated with the
+  //custom constraints must be updated.
+  //MatrixNd G(MatrixNd::Zero(CS.size(), model.dof_count));
+  CalcConstraintsJacobian (model, Q, CS, CS.G, update_kinematics);
+  err = CS.G * QDot;
+  
+  unsigned int cci, rows, cols;
+  for (unsigned int i = 0; i < CS.mCustomConstraintIndices.size(); i++) {
+    cci = CS.mCustomConstraintIndices[i];
+    rows= CS.mCustomConstraints[i]->mConstraintCount;
+    cols= CS.G.cols();
+    CS.mCustomConstraints[i]->CalcVelocityError(model,cci,Q,QDot,CS,
+                               CS.G.block(cci,0,rows,cols),err, cci);
+  }
+
+
 }
 
 RBDL_DLLAPI
@@ -628,7 +741,8 @@ void CalcConstrainedSystemVariables (
   CalcConstraintsPositionError (model, Q, CS, CS.err, false);
 
   // Compute velocity error for Baugarte stabilization.
-  CS.errd = CS.G * QDot;
+  CalcConstraintsVelocityError (model, Q, QDot, CS, CS.errd, false);  
+  //CS.errd = CS.G * QDot;
 
   // Compute gamma
   unsigned int prev_body_id = 0;
@@ -638,8 +752,8 @@ void CalcConstrainedSystemVariables (
   CS.QDDot_0.setZero();
   UpdateKinematicsCustom(model, NULL, NULL, &CS.QDDot_0);
 
-  for (unsigned int i = 0; i < CS.contactConstraintIndices.size(); i++) {
-    const unsigned int c = CS.contactConstraintIndices[i];
+  for (unsigned int i = 0; i < CS.mContactConstraintIndices.size(); i++) {
+    const unsigned int c = CS.mContactConstraintIndices[i];
 
     // only compute point accelerations when necessary
     if (prev_body_id != CS.body[c] || prev_body_point != CS.point[c]) {
@@ -654,8 +768,10 @@ void CalcConstrainedSystemVariables (
     CS.gamma[c] = CS.acceleration[c] - CS.normal[c].dot(gamma_i);
   }
 
-  for (unsigned int i = 0; i < CS.loopConstraintIndices.size(); i++) {
-    const unsigned int c = CS.loopConstraintIndices[i];
+
+
+  for (unsigned int i = 0; i < CS.mLoopConstraintIndices.size(); i++) {
+    const unsigned int c = CS.mLoopConstraintIndices[i];
 
     // Variables used for computations.
     Vector3d pos_p;
@@ -699,6 +815,23 @@ void CalcConstrainedSystemVariables (
       - 2. * CS.T_stab_inv[c] * CS.errd[c]
       - CS.T_stab_inv[c] * CS.T_stab_inv[c] * CS.err[c];
   }
+
+  unsigned int ccid,rows,cols,z;
+  for(unsigned int i=0; i< CS.mCustomConstraintIndices.size(); i++){
+    ccid  = CS.mCustomConstraintIndices[i];
+    rows  = CS.mCustomConstraints[i]->mConstraintCount;
+    cols  = CS.G.cols();
+    CS.mCustomConstraints[i]->CalcGamma(model,ccid,Q,QDot,CS,
+                                        CS.G.block(ccid,0,rows,cols),
+                                        CS.gamma,ccid);
+    for(unsigned int j=0; j<CS.mCustomConstraints[i]->mConstraintCount;j++){
+      z = ccid+j;
+      CS.gamma[z] += (- 2. * CS.T_stab_inv[z] * CS.errd[z]
+                      - CS.T_stab_inv[z] * CS.T_stab_inv[z] * CS.err[z]);
+    }
+
+  }
+
 }
 
 RBDL_DLLAPI
